@@ -30,7 +30,6 @@ export function KitchenWasteLogView() {
     e.preventDefault();
     if (!itemInput) return;
     logKitchenWaste({
-      date: new Date().toISOString().slice(0, 10),
       station: stationInput,
       itemName: itemInput,
       quantity: qtyInput,

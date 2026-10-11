@@ -4,12 +4,13 @@ import { PageHeader } from "../components/ui/primitives";
 import { cashierShifts, glAccounts, journalEntries } from "../data/demo";
 import { usePlatform } from "../store/platform";
 import { naira } from "../lib/utils";
-import { BookOpen, Landmark, Scale, Wallet, FileSpreadsheet, Building2, Receipt, ShieldCheck, TrendingUp } from "lucide-react";
+import { BookOpen, Landmark, Scale, Wallet, FileSpreadsheet, Building2, Receipt, ShieldCheck, TrendingUp, Activity } from "lucide-react";
 import { USALIStatementsView } from "../components/finance/USALIStatementsView";
 import { CityLedgerView } from "../components/finance/CityLedgerView";
 import { AccountsPayableView } from "../components/finance/AccountsPayableView";
 import { TaxComplianceView } from "../components/finance/TaxComplianceView";
 import { CashFlowView } from "../components/finance/CashFlowView";
+import { FinancialAgilityView } from "../components/finance/FinancialAgilityView";
 
 const CLASS_ORDER = ["asset", "liability", "equity", "revenue", "expense"] as const;
 const CLASS_LABEL: Record<string, string> = {
@@ -22,16 +23,17 @@ const CLASS_LABEL: Record<string, string> = {
 
 export default function FinancePage() {
   const { folios } = usePlatform();
-  const [tab, setTab] = useState<"usali" | "city_ledger" | "ap" | "tax" | "cash_flow" | "coa" | "journal" | "cash">("usali");
+  const [tab, setTab] = useState<"agility" | "usali" | "city_ledger" | "ap" | "tax" | "cash_flow" | "coa" | "journal" | "cash">("agility");
 
   const guestLedger = folios.reduce((a, f) => a + Math.max(-f.balance, 0), 0);
   const depositsHeld = folios.reduce((a, f) => a + Math.max(f.balance, 0), 0);
   const revenueAccounts = glAccounts.filter((a) => a.accountClass === "revenue");
   const expenseAccounts = glAccounts.filter((a) => a.accountClass === "expense");
 
-  const tabs: Array<["usali" | "city_ledger" | "ap" | "tax" | "cash_flow" | "coa" | "journal" | "cash", string, any]> = [
+  const tabs: Array<["agility" | "usali" | "city_ledger" | "ap" | "tax" | "cash_flow" | "coa" | "journal" | "cash", string, any]> = [
+    ["agility", "Financial Agility", TrendingUp],
     ["usali", "USALI Statements", FileSpreadsheet],
-    ["cash_flow", "Cash Flow Forecast (30D)", TrendingUp],
+    ["cash_flow", "Cash Flow Forecast (30D)", Activity],
     ["city_ledger", "City Ledger (AR)", Building2],
     ["ap", "Accounts Payable (3-Way)", Receipt],
     ["tax", "Tax Compliance (VAT/WHT)", ShieldCheck],
@@ -64,6 +66,7 @@ export default function FinancePage() {
         ))}
       </div>
 
+      {tab === "agility" && <FinancialAgilityView />}
       {tab === "usali" && <USALIStatementsView />}
       {tab === "cash_flow" && <CashFlowView />}
       {tab === "city_ledger" && <CityLedgerView />}

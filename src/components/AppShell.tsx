@@ -2,13 +2,15 @@ import { useState, type ReactNode } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   Activity, ArrowLeftRight, BarChart3, Bell, Building2, CreditCard, Crown,
-  FileText, Gauge, HandCoins, LayoutDashboard, LogOut, Menu, Moon, Package, Plug,
+  FileText, Gauge, Globe2, HandCoins, LayoutDashboard, LogOut, Menu, Moon, Package, Plug,
   ShieldCheck, Sparkles, TrendingUp, UtensilsCrossed, Users, Wrench, X,
 } from "lucide-react";
 import { useAuth } from "../auth/auth";
 import { PROPERTY } from "../data/demo";
 import { ROLE_LABELS } from "../types";
 import { cn } from "../lib/utils";
+import { ThemeSwitcher } from "../theme/ThemeSwitcher";
+import { MarketSwitcher } from "../i18n/MarketSwitcher";
 
 interface NavItem {
   label: string;
@@ -83,6 +85,7 @@ const NAV: NavModule[] = [
   {
     label: "Platform", code: "M-PLT", badge: "Core",
     items: [
+      { label: "Global Localization", to: "/localization", icon: <Globe2 size={15} /> },
       { label: "Reports & Audit", to: "/reports", icon: <Gauge size={15} /> },
       { label: "System Admin", to: "/admin", icon: <ShieldCheck size={15} /> },
     ],
@@ -192,6 +195,8 @@ export function AppShell() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <MarketSwitcher />
+            <ThemeSwitcher />
             <button className="relative rounded-lg p-2 text-brand-200/70 hover:bg-brand-900/60 hover:text-brand-50" aria-label="Notifications">
               <Bell size={17} />
               <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-gold-400" />

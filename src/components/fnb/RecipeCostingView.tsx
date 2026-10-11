@@ -95,7 +95,7 @@ export function RecipeCostingView() {
           <div className="divide-y divide-brand-800/40">
             {filteredRecipes.map((r) => {
               const isSelected = r.id === selectedRecipe?.id;
-              const isFavorable = r.foodCostPct <= r.targetFoodCostPct;
+              const isFavorable = r.foodCostPct <= (r.targetFoodCostPct ?? r.targetCostPct ?? 0);
 
               return (
                 <button
@@ -150,15 +150,15 @@ export function RecipeCostingView() {
                   {selectedRecipe.itemName}
                 </h2>
                 <p className="text-xs text-brand-200/60 mt-1">
-                  Target Food Cost: {selectedRecipe.targetFoodCostPct}% · Variance:{" "}
+                  Target Food Cost: {(selectedRecipe.targetFoodCostPct ?? selectedRecipe.targetCostPct ?? 0)}% · Variance:{" "}
                   <span
                     className={
-                      selectedRecipe.foodCostPct <= selectedRecipe.targetFoodCostPct
+                      selectedRecipe.foodCostPct <= (selectedRecipe.targetFoodCostPct ?? selectedRecipe.targetCostPct ?? 0)
                         ? "text-emerald-400 font-semibold"
                         : "text-rose-400 font-semibold"
                     }
                   >
-                    {(selectedRecipe.foodCostPct - selectedRecipe.targetFoodCostPct).toFixed(1)}%
+                    {(selectedRecipe.foodCostPct - (selectedRecipe.targetFoodCostPct ?? selectedRecipe.targetCostPct ?? 0)).toFixed(1)}%
                   </span>
                 </p>
               </div>
@@ -169,7 +169,7 @@ export function RecipeCostingView() {
                   {naira(selectedRecipe.sellingPrice)}
                 </p>
                 <p className="text-[11px] font-mono text-emerald-400">
-                  Gross Margin: {naira(selectedRecipe.sellingPrice - selectedRecipe.rawCostTotal)}
+                  Gross Margin: {naira(selectedRecipe.sellingPrice - (selectedRecipe.rawCostTotal ?? selectedRecipe.foodCost))}
                 </p>
               </div>
             </div>
@@ -179,14 +179,14 @@ export function RecipeCostingView() {
               <div>
                 <span className="text-brand-300/70">Raw Ingredients Cost</span>
                 <p className="font-mono text-sm font-semibold text-rose-300 mt-0.5">
-                  {naira(selectedRecipe.rawCostTotal)}
+                  {naira(selectedRecipe.rawCostTotal ?? selectedRecipe.foodCost)}
                 </p>
               </div>
               <div>
                 <span className="text-brand-300/70">Actual Food Cost %</span>
                 <p
                   className={`font-mono text-sm font-bold mt-0.5 ${
-                    selectedRecipe.foodCostPct <= selectedRecipe.targetFoodCostPct
+                    selectedRecipe.foodCostPct <= (selectedRecipe.targetFoodCostPct ?? selectedRecipe.targetCostPct ?? 0)
                       ? "text-emerald-400"
                       : "text-rose-400"
                   }`}
@@ -230,13 +230,13 @@ export function RecipeCostingView() {
                           {ing.quantity} {ing.unit}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono text-brand-200/70">
-                          {naira(ing.costPerUnit)}
+                          {naira(ing.costPerUnit ?? ing.unitCost)}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono text-brand-200/70">
-                          {ing.yieldPct}%
+                          {ing.yieldPct ?? 100}%
                         </td>
                         <td className="px-4 py-2.5 text-right font-mono font-semibold text-gold-300">
-                          {naira(ing.totalCost)}
+                          {naira(ing.totalCost ?? ing.lineCost)}
                         </td>
                       </tr>
                     ))}

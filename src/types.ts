@@ -20,8 +20,11 @@ export interface Room {
   bedType?: "King" | "Twin" | "Queen" | "Suite";
   features?: string[];
   connectingRoomId?: string | null;
+  connectingRoomNumber?: string | null;
   oooReason?: string;
   oooReturnDate?: string;
+  outOfOrderReason?: string;
+  outOfOrderReturnDate?: string;
   assignedHousekeeper?: string | null;
   cleaningCredits?: number;
   dndActive?: boolean;
@@ -70,6 +73,7 @@ export type ReservationStatus =
 export interface Reservation {
   id: string;
   confirmationNumber: string;
+  confirmationCode?: string;
   guestId: string;
   roomTypeId: string | null;
   roomId: string | null;
@@ -85,18 +89,22 @@ export interface Reservation {
   isVip: boolean;
   ratePlanCode?: string;
   ratePerNight?: number;
+  rateAdjustment?: number;
   marketSegment?: string;
   specialRequests?: string;
   keyCardsIssued?: number;
   assignedRoomNumber?: string;
   checkedInAt?: string;
   checkedOutAt?: string;
+  guestName?: string;
 }
 
 export interface GuestStay {
   id: string;
   reservationId: string;
   guestId: string;
+  guestName?: string;
+  confirmationCode?: string;
   roomId: string;
   expectedArrival: string;
   expectedDeparture: string;
@@ -108,6 +116,7 @@ export interface GuestStay {
 export interface Folio {
   id: string;
   guestStayId: string;
+  reservationId?: string;
   folioNumber: string;
   status: "open" | "closed";
   balance: number; // negative = guest owes (debits exceed credits)
@@ -119,16 +128,23 @@ export interface Folio {
 export interface FolioLine {
   id?: string;
   folioId: string;
-  type: "debit" | "credit";
+  type?: "debit" | "credit";
   description: string;
   amount: number;
   window?: number; // 1: Room & Tax, 2: Extras & Incidental, 3: Direct Bill
+  windowNumber?: number;
+  chargeCode?: string;
   date?: string;
   department?: string;
   reference?: string;
   taxAmount?: number;
+  serviceCharge?: number;
   subtotal?: number;
+  totalAmount?: number;
   paymentMethod?: string;
+  postedAt?: string;
+  postedBy?: string;
+  status?: "posted" | "void";
 }
 
 export interface GuestTrace {
@@ -221,10 +237,13 @@ export type HkPriority = "normal" | "high" | "urgent";
 export interface HousekeepingTask {
   id: string;
   roomId: string;
+  roomNumber?: string;
   taskType: string;
   priority: HkPriority;
   status: HkTaskStatus;
   assignedTo: string | null;
+  description?: string;
+  createdAt?: string;
 }
 
 export interface Employee {
@@ -237,6 +256,7 @@ export interface Employee {
   departmentId: string;
   position: string;
   salary: number;
+  shift?: "morning" | "evening" | "night" | "rotating";
   status: "active" | "on_leave" | "terminated";
 }
 
@@ -470,9 +490,29 @@ export interface ShiftHandoverRecord {
 }
 
 // ----------------- Preventative Maintenance -----------------
+export type EquipmentType =
+  | "hvac"
+  | "door_lock"
+  | "plumbing"
+  | "fire_safety"
+  | "generator"
+  | "elevator"
+  | "electrical"
+  | "tv_av";
+
+export type RecurringFrequency =
+  | "weekly"
+  | "bi_weekly"
+  | "monthly"
+  | "quarterly"
+  | "semi_annual"
+  | "annual";
+
 export interface PreventativeMaintenanceChecklistItem {
   id: string;
-  item: string;
+  item?: string;
+  task?: string;
+  expectedReading?: string;
   passed?: boolean;
   reading?: string;
   notes?: string;
@@ -482,17 +522,20 @@ export interface PreventativeMaintenanceSchedule {
   id: string;
   scheduleCode: string;
   title: string;
-  equipmentType: "HVAC & Air Con" | "Fire & Smoke Safety" | "Plumbing & Water Heaters" | "RFID Door Locks" | "Electrical & Backup Generator" | "Elevators & Lifts" | "Refrigeration & Minibars" | "Windows & Balconies";
-  targetType: "room" | "floor" | "common_area" | "central_plant";
-  targetIds: string[];
-  frequency: "weekly" | "bi_weekly" | "monthly" | "quarterly" | "semi_annual" | "annual";
+  equipmentType: EquipmentType | "HVAC & Air Con" | "Fire & Smoke Safety" | "Plumbing & Water Heaters" | "RFID Door Locks" | "Electrical & Backup Generator" | "Elevators & Lifts" | "Refrigeration & Minibars" | "Windows & Balconies";
+  targetType?: "room" | "floor" | "common_area" | "central_plant";
+  targetIds?: string[];
+  targetLocations?: string[];
+  frequency: RecurringFrequency;
   assignedEngineer: string;
-  lastCompletedDate: string | null;
+  lastCompletedDate?: string | null;
   nextDueDate: string;
-  status: "scheduled" | "due_soon" | "overdue" | "in_progress" | "completed";
+  status: "scheduled" | "due_soon" | "overdue" | "in_progress" | "completed" | "active";
   checklist: PreventativeMaintenanceChecklistItem[];
-  complianceScore: number;
+  complianceScore?: number;
   notes?: string;
+  estimatedDurationMinutes?: number;
+  compliancePercentage?: number;
 }
 
 export interface PmInspectionLog {
@@ -501,12 +544,14 @@ export interface PmInspectionLog {
   scheduleTitle: string;
   equipmentType: string;
   inspectedTarget: string;
-  technicianName: string;
-  inspectedAt: string;
-  result: "passed" | "passed_with_notes" | "failed_repair_needed";
-  readings: Record<string, string>;
-  findings: string;
+  technicianName?: string;
+  inspectedAt?: string;
+  result?: "passed" | "passed_with_notes" | "failed_repair_needed" | "passed_minor_issues";
+  readings?: Record<string, string>;
+  findings?: string;
   spawnedWorkOrderId?: string;
+  measuredReadings?: { label: string; target: string; actual: string }[];
+  findingsAndRepairs?: string;
 }
 
 // ----------------- Yield & Revenue Management -----------------
@@ -528,6 +573,7 @@ export interface MarketEvent {
 }
 
 export interface DynamicRateRecommendation {
+  id?: string;
   roomTypeId: string;
   roomTypeName: string;
   currentBaseRate: number;
@@ -539,15 +585,24 @@ export interface DynamicRateRecommendation {
   minStayRequirement?: number;
   projectedRevPARGain: number;
   applied: boolean;
+  targetDate?: string;
+  percentageAdjustment?: number;
+  rationale?: string;
+  projectedRevparGain?: number;
+  competitorAvgRate?: number;
 }
 
 export interface YieldRule {
   id: string;
   name: string;
-  condition: string;
-  action: string;
+  condition?: string;
+  action?: string;
   isActive: boolean;
   lastTriggered?: string;
+  conditionType?: string;
+  thresholdValue?: number;
+  actionAdjustmentPercent?: number;
+  description?: string;
 }
 
 // ----------------- Night Audit -----------------
@@ -578,25 +633,28 @@ export interface NightAuditReport {
 // ----------------- Guest Sentiment & CRM -----------------
 export interface GuestSurveyResponse {
   id: string;
-  guestId: string;
+  guestId?: string;
   guestName: string;
-  stayId: string;
+  stayId?: string;
   roomNumber: string;
   checkoutDate: string;
   submittedAt: string;
-  channel: "Post-Stay Email" | "In-Room QR / Tablet" | "WhatsApp Concierge" | "OTA Direct Review" | "Google Review";
+  channel: "Post-Stay Email" | "In-Room QR / Tablet" | "WhatsApp Concierge" | "OTA Direct Review" | "Google Review" | "post_stay_email" | "in_room_qr" | "whatsapp_concierge" | "ota_direct_review" | "google_review";
   overallScore: number;
-  npsType: "promoter" | "passive" | "detractor";
+  npsType?: "promoter" | "passive" | "detractor";
   categories: {
     frontDesk: number;
     cleanliness: number;
     dining: number;
     roomComfort: number;
+    comfort?: number;
     value: number;
   };
-  sentiment: "positive" | "neutral" | "negative";
+  sentiment: "positive" | "neutral" | "negative" | "promoter" | "passive" | "detractor";
   comment: string;
-  highlights: string[];
+  highlights?: string[];
+  highlightTags?: string[];
+  reservationId?: string;
   serviceRecoveryTicketId?: string;
 }
 
@@ -680,7 +738,7 @@ export interface SmartRoomControl {
   currentTemperature: number;
   hvacMode: "cool" | "heat" | "fan" | "eco" | "off";
   fanSpeed: "auto" | "low" | "medium" | "high";
-  lightingScene: "all_off" | "relax" | "bright" | "night" | "work" | "ambient";
+  lightingScene: "all_off" | "relax" | "bright" | "night" | "work" | "ambient" | "custom";
   lights: {
     master: boolean;
     entryway: boolean;
@@ -783,12 +841,15 @@ export interface TaxRemittanceSchedule {
 }
 
 // ----------------- Food & Beverage Operations (M-FNB) -----------------
-export type TableStatus = "available" | "seated" | "order_placed" | "billed";
+export type TableStatus = "available" | "seated" | "order_placed" | "billed" | "vacant" | "occupied" | "reserved" | "billing" | "dirty";
 export type RestaurantZone = "Main Dining Room" | "Terrace & Poolside" | "Executive Lounge" | "In-Room Dining (IRDs)";
 
 export interface RestaurantTable {
   id: string;
   number: string;
+  tableNumber?: string;
+  outletName?: string;
+  section?: string;
   zone: RestaurantZone;
   capacity: number;
   status: TableStatus;
@@ -799,21 +860,25 @@ export interface RestaurantTable {
   serverName?: string;
   seatedAt?: string;
   totalAmount?: number;
+  currentOrderTotal?: number;
   activeCovers?: number;
 }
 
 export type KitchenStation = "Hot Kitchen" | "Grill & Broiler" | "Pantry & Cold Salads" | "Pastry & Dessert" | "Bar Dispenser";
-export type KotStatus = "queued" | "cooking" | "ready" | "served";
+export type KotStation = "hot_kitchen" | "cold_larder" | "pastry" | "bar";
+export type KotStatus = "queued" | "cooking" | "ready" | "served" | "fired" | "preparing";
 
 export interface KotItem {
   id: string;
   menuItemId: string;
   name: string;
+  itemName?: string;
   quantity: number;
   modifiers?: string[];
   course: "Starters" | "Mains" | "Dessert" | "Beverage";
   status: KotStatus;
   station: KitchenStation;
+  specialInstructions?: string;
 }
 
 export interface KitchenOrderTicket {
@@ -821,8 +886,12 @@ export interface KitchenOrderTicket {
   ticketNumber: string;
   outletName: string;
   tableOrRoom: string;
+  tableNumber?: string;
   serverName: string;
   createdAt: string;
+  firedAt?: string;
+  station?: KotStation;
+  priority?: "normal" | "high" | "urgent";
   orderType: "dine_in" | "room_service" | "poolside" | "takeaway";
   guestName?: string;
   roomNumber?: string;
@@ -832,62 +901,86 @@ export interface KitchenOrderTicket {
   specialInstructions?: string;
 }
 
+/** Alias used by the KDS view for station-typed props. */
+export type KitchenTicket = KitchenOrderTicket;
+
 export interface RecipeIngredient {
   productId: string;
   name: string;
   portionQty: number;
+  quantity?: number;
   unit: string;
   unitCost: number;
+  costPerUnit?: number;
   lineCost: number;
+  totalCost?: number;
+  yieldPct?: number;
 }
 
 export interface RecipeCostingItem {
   id: string;
   menuItemId: string;
   name: string;
+  recipeCode?: string;
+  itemName?: string;
+  portionSize?: string;
   category: string;
   sellingPrice: number;
   foodCost: number;
   foodCostPct: number; // e.g. 28.5%
-  targetCostPct: number; // e.g. 30.0%
+  targetCostPct?: number; // e.g. 30.0%
+  targetFoodCostPct?: number;
+  rawCostTotal?: number;
   grossMargin: number;
   engineeringClass: "Star (High Margin / Popular)" | "Plowhorse (Low Margin / Popular)" | "Puzzle (High Margin / Niche)" | "Dog (Low Margin / Low Popularity)";
   popularityScore: number; // monthly sales count
   ingredients: RecipeIngredient[];
 }
 
+/** Alias used by the recipe costing UI. */
+export type RecipeCosting = RecipeCostingItem;
+
 export interface BanquetEventOrder {
   id: string;
   beoNumber: string;
-  eventTitle: string;
+  eventTitle?: string;
+  eventName?: string;
   clientName: string;
   clientCompany?: string;
   eventDate: string;
-  startTime: string;
-  endTime: string;
-  hallName: string;
-  expectedCovers: number;
-  guaranteedCovers: number;
-  mealServiceType: "International Buffet" | "Plated 4-Course VIP" | "Cocktail & Canapés" | "Working Executive Lunch";
-  menuHighlights: string[];
-  beveragePackage: "Full Open Premium Bar" | "Wine & Soft Drinks Package" | "On Consumption";
+  startTime?: string;
+  endTime?: string;
+  hallName?: string;
+  venue?: string;
+  expectedCovers?: number;
+  expectedPax?: number;
+  guaranteedCovers?: number;
+  guaranteedPax?: number;
+  mealServiceType?: "International Buffet" | "Plated 4-Course VIP" | "Cocktail & Canapés" | "Working Executive Lunch";
+  menuHighlights?: string[];
+  menuPackage?: string;
+  beveragePackage?: "Full Open Premium Bar" | "Wine & Soft Drinks Package" | "On Consumption";
   specialDietaryNotes?: string;
-  totalBudget: number;
-  depositReceived: number;
-  status: "tentative" | "contracted" | "food_tasting_done" | "in_preparation" | "completed";
+  totalBudget?: number;
+  contractAmount?: number;
+  depositReceived?: number;
+  depositPaid?: number;
+  avRequirements?: string[];
+  status: "tentative" | "contracted" | "food_tasting_done" | "in_preparation" | "completed" | "definite";
 }
 
 export interface KitchenWasteLog {
   id: string;
   date: string;
-  station: KitchenStation;
+  station: KitchenStation | string;
   itemName: string;
   quantity: number;
   unit: string;
   costLoss: number;
-  reason: "Burnt / Overcooked" | "Expired / Spoilage" | "Prep Trimmings" | "Buffet Surplus" | "Guest Return";
-  loggedByChef: string;
-  actionTaken: string;
+  reason: "Burnt / Overcooked" | "Expired / Spoilage" | "Prep Trimmings" | "Buffet Surplus" | "Guest Return" | "trim_loss" | "spoilage" | "burnt" | "expired";
+  loggedByChef?: string;
+  loggedBy?: string;
+  actionTaken?: string;
 }
 
 // ----------------- Supply Chain & Inventory (M-INV) -----------------
@@ -897,6 +990,7 @@ export interface SupplyChainStore {
   name: string;
   type: "Central Warehouse" | "Kitchen Dry Store" | "Walk-in Cold Room" | "Wine & Beverage Cellar" | "Housekeeping Linen & Amenities" | "Engineering Spares";
   managerName: string;
+  custodian?: string;
   location: string;
   activeSkus: number;
   totalValue: number;
@@ -909,37 +1003,49 @@ export interface SupplyChainProduct {
   category: "Perishables & Produce" | "Meat & Seafood" | "Dry Provisions" | "Beverage & Spirits" | "Guest Amenities" | "Linen & Textiles" | "Chemicals & Cleaning" | "Engineering Spares";
   unit: string;
   costPrice: number;
+  unitCost?: number;
   parLevel: number;
   reorderPoint: number;
   safetyStock: number;
   storageCondition: "Ambient Dry" | "Refrigerated (+2°C to +4°C)" | "Deep Freeze (-18°C)" | "Secure Locked Vault";
   supplierName: string;
+  primarySupplier?: string;
   leadTimeDays: number;
   stockByStore: Record<string, number>; // storeId -> quantity
   totalQuantity: number;
+  totalStock?: number;
   totalValue: number;
   status: "healthy" | "low_stock" | "critical";
 }
 
 export interface RequisitionItem {
-  productId: string;
-  name: string;
+  productId?: string;
+  name?: string;
+  itemName?: string;
   quantity: number;
   unit: string;
-  estimatedCost: number;
-  purpose: string;
+  estimatedCost?: number;
+  estimatedUnitCost?: number;
+  total?: number;
+  purpose?: string;
 }
 
 export interface PurchaseRequisition {
   id: string;
-  requisitionNumber: string;
-  department: "Food & Beverage - Kitchen" | "Front Office & Guest Services" | "Housekeeping" | "Maintenance & Engineering" | "Food & Beverage - Bar";
+  requisitionNumber?: string;
+  prNumber?: string;
+  department: "Food & Beverage - Kitchen" | "Front Office & Guest Services" | "Housekeeping" | "Maintenance & Engineering" | "Food & Beverage - Bar" | string;
   requestedBy: string;
-  requestDate: string;
-  urgency: "Routine Par Fill" | "Event Demand" | "Emergency Rush";
+  requestDate?: string;
+  date?: string;
+  requiredByDate?: string;
+  urgency?: "Routine Par Fill" | "Event Demand" | "Emergency Rush";
   items: RequisitionItem[];
-  totalEstimate: number;
-  status: "draft" | "submitted" | "hod_approved" | "procurement_po_created" | "rejected";
+  totalEstimate?: number;
+  estimatedTotal?: number;
+  budgetCode?: string;
+  justification?: string;
+  status: "draft" | "submitted" | "hod_approved" | "procurement_po_created" | "rejected" | "pending_approval" | "approved" | "po_created";
   poNumber?: string;
   notes?: string;
 }
@@ -947,11 +1053,17 @@ export interface PurchaseRequisition {
 export interface GrnLineItem {
   productId: string;
   name: string;
+  itemName?: string;
   orderedQty: number;
+  quantityOrdered?: number;
   receivedQty: number;
+  quantityReceived?: number;
   rejectedQty: number;
+  quantityRejected?: number;
   unit: string;
   unitCost: number;
+  unitPrice?: number;
+  total?: number;
   rejectionReason?: string;
 }
 
@@ -965,28 +1077,54 @@ export interface GoodsReceivedNote {
   storeTarget: string;
   deliveryNoteNumber: string;
   temperatureOnArrival?: string; // e.g. "-19.2°C"
+  temperatureCheck?: number;
   hygieneCondition: "Passed Inspection" | "Requires Washing" | "Rejected";
+  qualityInspectionPassed?: boolean;
   items: GrnLineItem[];
   totalAcceptedValue: number;
+  totalValue?: number;
   hasVariance: boolean;
-  status: "inspected" | "posted_to_inventory" | "rejected";
+  status: "inspected" | "posted_to_inventory" | "rejected" | "received" | "inspecting";
 }
 
 export interface StoreTransferRecord {
   id: string;
   transferNumber: string;
-  transferDate: string;
-  fromStoreName: string;
-  toStoreName: string;
-  requestedBy: string;
-  authorizedBy: string;
+  transferDate?: string;
+  date?: string;
+  fromStoreName?: string;
+  toStoreName?: string;
+  fromStoreId?: string;
+  toStoreId?: string;
+  requestedBy?: string;
+  authorizedBy?: string;
+  transferredBy?: string;
   items: Array<{
     productId: string;
-    name: string;
+    name?: string;
+    productName?: string;
     quantity: number;
     unit: string;
   }>;
-  status: "pending_dispatch" | "in_transit" | "received";
+  status: "pending_dispatch" | "in_transit" | "received" | "completed";
+  notes?: string;
+}
+
+export interface StocktakeLineItem {
+  sku: string;
+  name?: string;
+  productName?: string;
+  systemQty: number;
+  systemQuantity?: number;
+  physicalQty: number;
+  physicalQuantity?: number;
+  varianceQty?: number;
+  variance?: number;
+  unit?: string;
+  unitCost: number;
+  varianceCost?: number;
+  costImpact?: number;
+  reason?: string;
   notes?: string;
 }
 
@@ -994,27 +1132,25 @@ export interface StocktakeAuditRecord {
   id: string;
   auditNumber: string;
   storeName: string;
-  auditDate: string;
-  auditorName: string;
+  auditDate?: string;
+  date?: string;
+  auditorName?: string;
+  auditedBy?: string;
   categoriesAudited: string[];
   totalSkusCounted: number;
   totalSystemValue: number;
   totalPhysicalValue: number;
   varianceValue: number;
   variancePct: number;
+  netVarianceCost?: number;
   discrepanciesCount: number;
   status: "in_progress" | "reconciled" | "posted_adjustment";
-  itemsSample: Array<{
-    sku: string;
-    name: string;
-    systemQty: number;
-    physicalQty: number;
-    varianceQty: number;
-    unitCost: number;
-    varianceCost: number;
-    reason?: string;
-  }>;
+  items?: StocktakeLineItem[];
+  itemsSample?: StocktakeLineItem[];
 }
+
+/** Alias used by the stocktake audit UI. */
+export type StocktakeAudit = StocktakeAuditRecord;
 
 // ---------------------------------------------------------------------------
 // Cash Flow Projections & 30-Day Liquidity Forecast
@@ -1182,18 +1318,21 @@ export interface ReplacedPart {
   id: string;
   partNumber: string;
   partName: string;
-  category: "Mechanical" | "Electrical" | "Plumbing" | "HVAC & Refrigeration" | "Electronics" | "Consumables";
+  category: "Mechanical" | "Electrical" | "Plumbing" | "HVAC & Refrigeration" | "Electronics" | "Consumables" | "Commercial Kitchen";
   quantity: number;
   unitCost: number;
   totalCost: number;
   supplierOrBatch?: string;
   warrantyExpiry?: string;
+  serialNumber?: string;
+  warrantyMonths?: number;
 }
 
 export interface MaintenanceAuditRecord {
   id: string;
   workOrderNumber: string;
   repairTicketCode: string;
+  assetId?: string;
   assetTag: string;
   assetName: string;
   assetCategory: "HVAC & Climate" | "Generators & Power" | "Chillers & Refrigeration" | "Elevators & Escalators" | "Commercial Kitchen" | "Plumbing & Boilers" | "Fire Safety & Access";
@@ -1232,6 +1371,22 @@ export interface MaintenanceAuditRecord {
   downtimeHours: number;
   preventativeAdvice?: string;
   status: "completed" | "verified" | "in_review";
+
+  // Flat audit-trail fields consumed by the asset audit UI
+  repairDate?: string;
+  startedAt?: string;
+  completedAt?: string;
+  durationMinutes?: number;
+  leadTechnicianId?: string;
+  leadTechnicianName?: string;
+  assistantTechnicians?: string[];
+  problemDescription?: string;
+  rootCauseAnalysis?: string;
+  preventionRecommendation?: string;
+  safetyProtocolPassed?: boolean;
+  laborHoursLogged?: number;
+  totalLaborCost?: number;
+  totalCost?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -1366,6 +1521,239 @@ export interface InventoryAlertNotification {
   actionStatus: "pending_reorder" | "po_created" | "acknowledged" | "dismissed";
   linkedPoNumber?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Advanced Inventory, Stores & Stock-keeping (M-INV deep layer)
+//
+// Extends the multi-store foundation with the controls world-class hotel
+// storerooms run on: bin locations, batch/lot + expiry (FEFO), a perpetual
+// stock ledger, per-unit conversions, ABC/cycle-count classification, $/€
+// landed cost, and internal store requisitions (issue/return).
+// ---------------------------------------------------------------------------
+
+export type StockValuationMethod = "fifo" | "weighted_average" | "standard";
+
+export type StockLedgerReason =
+  | "opening"
+  | "purchase_receipt"
+  | "issue"
+  | "return"
+  | "transfer_out"
+  | "transfer_in"
+  | "adjustment"
+  | "wastage"
+  | "production_in"
+  | "production_out"
+  | "count_variance";
+
+export interface StockLedgerEntry {
+  id: string;
+  timestamp: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  storeId: string;
+  storeName: string;
+  reason: StockLedgerReason;
+  /** Positive = receipt/return, negative = issue/consumption. Base units. */
+  quantity: number;
+  unitCost: number;
+  totalValue: number;
+  /** Running on-hand balance in the store after this movement. */
+  balanceAfter: number;
+  batchNumber?: string;
+  expiryDate?: string;
+  reference?: string;
+  performedBy: string;
+}
+
+export interface StockBatch {
+  id: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  storeId: string;
+  batchNumber: string;
+  lotNumber?: string;
+  supplierName: string;
+  receivedDate: string;
+  expiryDate: string;
+  quantityRemaining: number;
+  unit: string;
+  unitCost: number;
+  /** FEFO rank — 1 is the first to be consumed. Derived, shown for clarity. */
+  fefoRank: number;
+  temperatureLog?: string;
+}
+
+export type AbcClass = "A" | "B" | "C";
+
+export interface AbcClassification {
+  productId: string;
+  productName: string;
+  sku: string;
+  category: string;
+  annualUsageValue: number;
+  /** Cumulative share of total usage value (Pareto). */
+  cumulativeSharePct: number;
+  class: AbcClass;
+  cycleCountFrequency: "weekly" | "monthly" | "quarterly";
+  countTolerancePct: number;
+}
+
+export interface BinLocation {
+  id: string;
+  storeId: string;
+  code: string;
+  zone: string;
+  aisle: string;
+  rack: string;
+  shelf: string;
+  bin: string;
+  capacityUnits: number;
+  usedUnits: number;
+  temperatureZone: "ambient" | "chilled" | "frozen" | "wine-cellar" | "dry";
+  notes?: string;
+}
+
+export interface UnitConversion {
+  productId: string;
+  baseUnit: string;
+  purchaseUnit: string;
+  /** Base units obtained from one purchase unit (e.g. 1 crate = 24 bottles). */
+  factor: number;
+  issueUnit: string;
+  issueFactor: number;
+}
+
+export interface StoreRequisition {
+  id: string;
+  requisitionNumber: string;
+  requestingDepartment: string;
+  issuingStoreId: string;
+  issuingStoreName: string;
+  requestedBy: string;
+  approvedBy?: string;
+  requestDate: string;
+  requiredDate: string;
+  status: "draft" | "pending_approval" | "approved" | "issued" | "partially_issued" | "rejected";
+  lines: Array<{
+    productId: string;
+    name: string;
+    requestedQty: number;
+    approvedQty: number;
+    issuedQty: number;
+    unit: string;
+    unitCost: number;
+    batchNumber?: string;
+  }>;
+  totalValue: number;
+  notes?: string;
+}
+
+export interface SlowMovingStock {
+  productId: string;
+  productName: string;
+  sku: string;
+  storeName: string;
+  onHand: number;
+  lastMovementDate: string | null;
+  daysSinceMovement: number;
+  tiedUpCapital: number;
+  suggestedAction: "promote" | "transfer" | "discount" | "write_off";
+}
+
+export interface InventoryControlMetrics {
+  totalSkus: number;
+  totalStores: number;
+  inventoryValue: number;
+  stockTurnoverRatio: number;
+  daysInventoryOutstanding: number;
+  shrinkagePct: number;
+  stockoutRatePct: number;
+  expiringWithin30Days: number;
+  expiringValueAtRisk: number;
+}
+
+// ---------------------------------------------------------------------------
+// Financial Agility (M-FIN decision layer)
+// ---------------------------------------------------------------------------
+
+export interface FinancialRatio {
+  id: string;
+  name: string;
+  category: "liquidity" | "profitability" | "efficiency" | "leverage" | "hospitality";
+  value: number;
+  benchmark: number;
+  unit: "ratio" | "percent" | "days" | "currency";
+  /** Worst → best direction for variance colouring. */
+  higherIsBetter: boolean;
+  formula: string;
+  interpretation: string;
+}
+
+export interface CashPositionPoint {
+  date: string;
+  operating: number;
+  investing: number;
+  financing: number;
+  closingCash: number;
+  minimumReserve: number;
+}
+
+export interface ScenarioResult {
+  id: string;
+  name: string;
+  assumptions: {
+    occupancyAdjustmentPct: number;
+    adrAdjustmentPct: number;
+    payrollAdjustmentPct: number;
+    arCollectionDelayDays: number;
+    capexFreeze: boolean;
+  };
+  projectedRevenue: number;
+  projectedEbitda: number;
+  projectedClosingCash: number;
+  runwayWeeks: number;
+  covenantBreach: boolean;
+  verdict: "healthy" | "watch" | "stressed";
+}
+
+export interface TreasuryAccount {
+  id: string;
+  name: string;
+  bank: string;
+  currency: string;
+  type: "operating" | "payroll" | "tax" | "reserve" | "collections";
+  balance: number;
+  availableBalance: number;
+  sweepTarget?: number;
+  lastReconciledAt: string;
+  unreconciledItems: number;
+}
+
+export interface CostVarianceLine {
+  id: string;
+  costCentre: string;
+  account: string;
+  budget: number;
+  actual: number;
+  variance: number;
+  variancePct: number;
+  driver: string;
+  /** True when the variance is favourable (revenue up or cost down). */
+  favourable: boolean;
+}
+
+export interface FinancialAgilityData {
+  metrics: InventoryControlMetrics;
+  ratios: FinancialRatio[];
+  cashPosition: CashPositionPoint[];
+  scenarios: ScenarioResult[];
+  treasuryAccounts: TreasuryAccount[];
+  costVariances: CostVarianceLine[];
+}
+
 
 
 

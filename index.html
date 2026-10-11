@@ -4,11 +4,25 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#081a15" />
     <meta
       name="description"
       content="INFINEON Enterprise — the complete hospitality management platform. Book your stay at Grand Palm Hotel Lagos."
     />
     <title>INFINEON Enterprise — Grand Palm Hotel Lagos</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a flash of the
+      // default palette. Mirrors ThemeProvider's storage key.
+      (function () {
+        try {
+          var t = localStorage.getItem("infineon.theme");
+          var valid = ["emerald", "midnight", "saffron", "dynasty", "lagoon", "aurora", "porcelain"];
+          document.documentElement.setAttribute("data-theme", valid.indexOf(t) >= 0 ? t : "emerald");
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "emerald");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

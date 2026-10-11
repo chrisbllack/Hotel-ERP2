@@ -14,7 +14,7 @@ export function TableFloorPlanView() {
   const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(null);
 
   const outletTables = restaurantTables.filter((t) => t.outletName === selectedOutlet);
-  const sections = Array.from(new Set(outletTables.map((t) => t.section)));
+  const sections = Array.from(new Set(outletTables.map((t) => t.section).filter((s): s is string => Boolean(s))));
 
   const filteredTables =
     selectedSection === "all"

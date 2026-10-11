@@ -27,6 +27,147 @@
   --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.6);
 }
 
+/* ============================================================================
+   Semantic design tokens
+   ----------------------------------------------------------------------------
+   Components consume the semantic names below (or the raw brand/gold ramps,
+   which every theme repaints). A theme is applied by setting `data-theme` on
+   <html>; the palettes further down override the ramps, so the whole app
+   recolours without touching component code. Keep every theme's ramp ordered
+   50 (lightest) → 950 (darkest) for dark themes, inverted for light themes.
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+
+  --surface-canvas: var(--color-brand-950);
+  --surface-panel: color-mix(in oklab, var(--color-brand-900) 84%, transparent);
+  --surface-elevated: var(--color-brand-800);
+  --surface-hover: color-mix(in oklab, var(--color-brand-800) 60%, transparent);
+  --surface-inset: color-mix(in oklab, var(--color-brand-950) 70%, transparent);
+  --border-subtle: color-mix(in oklab, var(--color-brand-800) 80%, transparent);
+  --border-strong: var(--color-brand-700);
+
+  --text-primary: var(--color-brand-50);
+  --text-secondary: var(--color-brand-100);
+  --text-muted: var(--color-brand-200);
+  --text-faint: color-mix(in oklab, var(--color-brand-200) 55%, transparent);
+  --text-on-accent: var(--color-brand-950);
+
+  --accent: var(--color-gold-400);
+  --accent-strong: var(--color-gold-500);
+  --accent-soft: color-mix(in oklab, var(--color-gold-500) 16%, transparent);
+  --focus-ring: color-mix(in oklab, var(--color-gold-400) 80%, transparent);
+
+  --grad-brand: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-800));
+  --grad-accent: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-600));
+  --grad-hero: radial-gradient(
+    circle at 30% 0%,
+    color-mix(in oklab, var(--color-brand-600) 45%, transparent),
+    transparent 60%
+  );
+
+  --radius-panel: 0.75rem;
+  --radius-control: 0.5rem;
+  --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-float: 0 18px 48px -20px rgb(0 0 0 / 0.75);
+}
+
+/* ============================================================================
+   Theme palettes — 7 selectable identities
+   ----------------------------------------------------------------------------
+   Each block repaints the brand & accent ramps plus display font, radii and
+   shadows. `data-theme` lives on <html>; the ThemeProvider sets it and
+   persists the choice. Add a theme by copying a block and registering it in
+   src/theme/themes.ts.
+   ========================================================================== */
+
+/* 1 · Emerald Executive — deep rainforest + brass (house default) */
+html[data-theme="emerald"] {
+  --color-brand-50: #ecf6f1;  --color-brand-100: #d3eae0; --color-brand-200: #a8d4c2;
+  --color-brand-300: #74b69c; --color-brand-400: #47937a; --color-brand-500: #2c765f;
+  --color-brand-600: #1f5d4b; --color-brand-700: #194a3d; --color-brand-800: #143a30;
+  --color-brand-900: #102e27; --color-brand-950: #081a15;
+  --color-gold-300: #e8cd7a; --color-gold-400: #d9b54c; --color-gold-500: #c9a227; --color-gold-600: #a5831d;
+  --font-display: Georgia, "Times New Roman", serif;
+  --radius-panel: 0.75rem; --radius-control: 0.5rem;
+}
+
+/* 2 · Midnight Sapphire — boardroom navy + electric cyan */
+html[data-theme="midnight"] {
+  --color-brand-50: #eef4ff;  --color-brand-100: #dbe7ff; --color-brand-200: #bdd0f7;
+  --color-brand-300: #8fabec; --color-brand-400: #5f82d8; --color-brand-500: #3f61bd;
+  --color-brand-600: #2f4a9c; --color-brand-700: #263c7d; --color-brand-800: #1c2c5c;
+  --color-brand-900: #131f42; --color-brand-950: #0a1229;
+  --color-gold-300: #a5f3fc; --color-gold-400: #67e8f9; --color-gold-500: #22d3ee; --color-gold-600: #0891b2;
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --radius-panel: 0.625rem; --radius-control: 0.5rem;
+  --shadow-float: 0 22px 60px -24px rgb(2 132 199 / 0.35);
+}
+
+/* 3 · Saffron Heritage — Indian maroon + marigold */
+html[data-theme="saffron"] {
+  --color-brand-50: #fff4ed;  --color-brand-100: #ffe6d5; --color-brand-200: #ffc9ab;
+  --color-brand-300: #ffa474; --color-brand-400: #ff7a3c; --color-brand-500: #f95d14;
+  --color-brand-600: #d9430a; --color-brand-700: #a9320c; --color-brand-800: #7c2410;
+  --color-brand-900: #4a1810; --color-brand-950: #2a0d08;
+  --color-gold-300: #ffe08a; --color-gold-400: #ffc94d; --color-gold-500: #f5a623; --color-gold-600: #d17d0a;
+  --font-display: "Noto Serif", Georgia, "Times New Roman", serif;
+  --radius-panel: 0.875rem; --radius-control: 0.625rem;
+  --shadow-float: 0 20px 52px -22px rgb(249 93 20 / 0.4);
+}
+
+/* 4 · Jade Dynasty — Chinese ink + cinnabar + jade */
+html[data-theme="dynasty"] {
+  --color-brand-50: #f2f4f3;  --color-brand-100: #dfe5e3; --color-brand-200: #b9c6c2;
+  --color-brand-300: #8ba39d; --color-brand-400: #5c7d76; --color-brand-500: #3c5a54;
+  --color-brand-600: #2b443f; --color-brand-700: #233530; --color-brand-800: #1a2724;
+  --color-brand-900: #111a18; --color-brand-950: #090f0e;
+  --color-gold-300: #fda4a4; --color-gold-400: #f87171; --color-gold-500: #dc2626; --color-gold-600: #b91c1c;
+  --font-display: Georgia, "Songti SC", "Noto Serif SC", serif;
+  --radius-panel: 0.5rem; --radius-control: 0.375rem;
+  --shadow-float: 0 20px 52px -22px rgb(220 38 38 / 0.35);
+}
+
+/* 5 · Lagoon Resort — Nigerian coastal teal + coral, bright & airy */
+html[data-theme="lagoon"] {
+  --color-brand-50: #eafcfb;  --color-brand-100: #cdf5f2; --color-brand-200: #9fe9e4;
+  --color-brand-300: #66d6d0; --color-brand-400: #35b9b4; --color-brand-500: #1d9a97;
+  --color-brand-600: #157b7b; --color-brand-700: #146263; --color-brand-800: #134e4f;
+  --color-brand-900: #0f3b3d; --color-brand-950: #072628;
+  --color-gold-300: #ffc4a3; --color-gold-400: #ff9f6e; --color-gold-500: #ff7a3c; --color-gold-600: #e85d1f;
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --radius-panel: 1rem; --radius-control: 0.75rem;
+  --shadow-float: 0 22px 56px -24px rgb(255 122 60 / 0.4);
+}
+
+/* 6 · Aurora Light — cool, luminous, indigo accent */
+html[data-theme="aurora"] {
+  color-scheme: light;
+  --color-brand-50: #101322;  --color-brand-100: #232842; --color-brand-200: #4a5270;
+  --color-brand-300: #737c9c; --color-brand-400: #9aa2c2; --color-brand-500: #c3c9df;
+  --color-brand-600: #dfe3ef; --color-brand-700: #e9ecf6; --color-brand-800: #f0f2f9;
+  --color-brand-900: #f6f7fb; --color-brand-950: #fbfbfe;
+  --color-gold-300: #818cf8; --color-gold-400: #6366f1; --color-gold-500: #4f46e5; --color-gold-600: #4338ca;
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --radius-panel: 0.75rem; --radius-control: 0.5rem;
+  --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.7), 0 10px 30px -18px rgb(30 41 59 / 0.28);
+  --shadow-float: 0 22px 60px -26px rgb(79 70 229 / 0.35);
+}
+
+/* 7 · Porcelain — warm cream, emerald accent, gallery-calm */
+html[data-theme="porcelain"] {
+  color-scheme: light;
+  --color-brand-50: #1a1a17;  --color-brand-100: #2f2f29; --color-brand-200: #5c5b51;
+  --color-brand-300: #8a8879; --color-brand-400: #b3b0a0; --color-brand-500: #d6d2c4;
+  --color-brand-600: #e9e5d9; --color-brand-700: #f1eee4; --color-brand-800: #f6f3ea;
+  --color-brand-900: #faf8f1; --color-brand-950: #fdfcf8;
+  --color-gold-300: #34d399; --color-gold-400: #10b981; --color-gold-500: #059669; --color-gold-600: #047857;
+  --font-display: Georgia, "Times New Roman", serif;
+  --radius-panel: 1rem; --radius-control: 0.75rem;
+  --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.7), 0 10px 30px -18px rgb(68 64 60 / 0.25);
+  --shadow-float: 0 22px 56px -26px rgb(5 150 105 / 0.32);
+}
+
 html,
 body,
 #root {
@@ -34,37 +175,45 @@ body,
 }
 
 body {
-  background-color: var(--color-brand-950);
-  color: #e7efe9;
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    Helvetica,
-    Arial,
-    sans-serif;
+  background-color: var(--surface-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-sans, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: var(--color-gold-500);
-  color: var(--color-brand-950);
+  background: var(--accent-strong);
+  color: var(--text-on-accent);
+}
+
+/* Accessible, theme-aware focus ring for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* Slim scrollbars for dense enterprise tables */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-brand-700) transparent;
+  scrollbar-color: var(--border-strong) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: var(--color-brand-700);
+  background: var(--border-strong);
   border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 @keyframes fade-up {

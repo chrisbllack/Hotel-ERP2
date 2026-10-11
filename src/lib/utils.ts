@@ -1,28 +1,53 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { DEFAULT_MARKET, getMarket, type MarketProfile } from "../i18n/markets";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const naira = (n: number, compact = false): string =>
-  new Intl.NumberFormat("en-NG", {
+// ---------------------------------------------------------------------------
+// Locale / currency formatting
+//
+// The active market is pushed in by MarketProvider so primitive pure helpers
+// (and the many existing `naira(...)` call sites) reflect the selected country
+// without threading context through every component.
+// ---------------------------------------------------------------------------
+let activeProfile: MarketProfile = getMarket(DEFAULT_MARKET);
+
+export function configureFormatter(marketId: string): void {
+  activeProfile = getMarket(marketId);
+}
+
+export function activeMarket(): MarketProfile {
+  return activeProfile;
+}
+
+/** Format a monetary amount in the active market's currency and locale. */
+export const money = (n: number, compact = false): string =>
+  new Intl.NumberFormat(activeProfile.locale, {
     style: "currency",
-    currency: "NGN",
+    currency: activeProfile.currency,
     maximumFractionDigits: compact && Math.abs(n) >= 1000 ? 0 : 2,
     notation: compact && Math.abs(n) >= 1_000_000 ? "compact" : "standard",
   }).format(n);
 
-export const num = (n: number): string => new Intl.NumberFormat("en-NG").format(n);
+/**
+ * Backwards-compatible alias. Historically NGN-only; now renders in the active
+ * market currency, defaulting to Nigerian Naira.
+ */
+export const naira = money;
+
+export const num = (n: number): string => new Intl.NumberFormat(activeProfile.locale).format(n);
 
 export const fmtDate = (iso: string): string => {
   const d = new Date(iso + (iso.length === 10 ? "T00:00:00" : ""));
-  return d.toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString(activeProfile.locale, { day: "2-digit", month: "short", year: "numeric" });
 };
 
 export const fmtDateTime = (iso: string): string => {
   const d = new Date(iso);
-  return d.toLocaleString("en-NG", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(activeProfile.locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 };
 
 export const todayISO = "2026-09-05";

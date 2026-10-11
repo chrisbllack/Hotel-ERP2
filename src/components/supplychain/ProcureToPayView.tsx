@@ -29,7 +29,7 @@ export function ProcureToPayView() {
       ? purchaseRequisitions
       : purchaseRequisitions.filter((pr) => pr.department === filterDepartment);
 
-  const totalPrValue = purchaseRequisitions.reduce((acc, pr) => acc + pr.estimatedTotal, 0);
+  const totalPrValue = purchaseRequisitions.reduce((acc, pr) => acc + (pr.estimatedTotal ?? pr.totalEstimate ?? 0), 0);
   const pendingCount = purchaseRequisitions.filter((pr) => pr.status === "pending_approval").length;
   const approvedCount = purchaseRequisitions.filter((pr) => pr.status === "approved" || pr.status === "po_created").length;
 
@@ -179,7 +179,7 @@ export function ProcureToPayView() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono font-semibold text-gold-300">
-                      {naira(pr.estimatedTotal)}
+                      {naira(pr.estimatedTotal ?? pr.totalEstimate ?? 0)}
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       {isPending && (

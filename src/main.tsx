@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import "./index.css";
 import App from "./App";
+import { ThemeProvider } from "./theme/ThemeProvider";
+import { MarketProvider } from "./i18n/MarketProvider";
 
 // Convex powers the integrated booking website and live console panels.
 // When VITE_CONVEX_URL is absent the client points at a placeholder so the
@@ -12,8 +14,12 @@ const convexClient = new ConvexReactClient(convexAddress ?? "https://convex-not-
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ConvexProvider client={convexClient}>
-      <App />
-    </ConvexProvider>
+    <ThemeProvider>
+      <MarketProvider>
+        <ConvexProvider client={convexClient}>
+          <App />
+        </ConvexProvider>
+      </MarketProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { usePlatform } from "../store/platform";
-import type { EquipmentType, RecurringFrequency } from "../types";
+import type { EquipmentType, RecurringFrequency, PreventativeMaintenanceChecklistItem } from "../types";
 import { Calendar, HardHat, Plus, Trash2, X } from "lucide-react";
 
 interface CreatePmScheduleModalProps {
@@ -20,7 +20,7 @@ export default function CreatePmScheduleModal({ isOpen, onClose }: CreatePmSched
   const [nextDueDate, setNextDueDate] = useState(businessDate || "2026-09-15");
 
   // Checklist items
-  const [checklistItems, setChecklistItems] = useState([
+  const [checklistItems, setChecklistItems] = useState<PreventativeMaintenanceChecklistItem[]>([
     { id: "c-1", task: "Inspect air filters and chemically clean if restricted", expectedReading: "Airflow > 450 CFM" },
     { id: "c-2", task: "Check refrigerant suction pressure and coil temperature", expectedReading: "65-75 PSI" },
     { id: "c-3", task: "Verify digital thermostat communication and fan speeds", expectedReading: "Accurate ±0.5°C" },

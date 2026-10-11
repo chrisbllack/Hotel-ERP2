@@ -41,6 +41,7 @@ export default function CreateSurveyModal({ isOpen, onClose }: CreateSurveyModal
         cleanliness,
         dining,
         frontDesk,
+        roomComfort: comfort,
         comfort,
         value,
       },

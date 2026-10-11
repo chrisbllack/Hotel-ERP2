@@ -49,6 +49,10 @@ import {
 
 type Tab = "arrivals" | "inhouse" | "departures" | "walkin" | "traces" | "keycards" | "nightaudit";
 
+/** A guest is blacklisted when their profile carries the Blacklist flag. */
+const isBlacklisted = (g?: Guest | null): boolean =>
+  Boolean(g?.flags?.some((f) => f === "Blacklist"));
+
 export default function FrontDeskPage() {
   const {
     businessDate,
@@ -248,6 +252,17 @@ export default function FrontDeskPage() {
   // Execute Check-In after wizard completion
   const handleCompleteCheckIn = () => {
     if (!checkInModalRes) return;
+    const guest = guests.find((g) => g.id === checkInModalRes.guestId);
+    if (isBlacklisted(guest)) {
+      notify(
+        `Check-in blocked: ${guest?.firstName} ${guest?.lastName} is on the Do-Not-Admit / blacklist. Escalate to the Duty Manager or Security before proceeding.`
+      );
+      return;
+    }
+    if (!selectedRoomId) {
+      notify("Please select a clean room before completing check-in.");
+      return;
+    }
     checkIn(checkInModalRes.id, {
       assignedRoomId: selectedRoomId,
       keyCardType,
@@ -1596,9 +1611,33 @@ export default function FrontDeskPage() {
                     );
                   })()}
 
-                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
-                    ✓ Identity document scanned and matched against hotel guest blacklist. No security flags.
-                  </div>
+                  {(() => {
+                    const g = guests.find((x) => x.id === checkInModalRes.guestId);
+                    const blocked = isBlacklisted(g);
+                    return (
+                      <div
+                        className={cn(
+                          "rounded-lg border p-3 text-xs",
+                          blocked
+                            ? "border-rose-500/50 bg-rose-500/15 text-rose-100"
+                            : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                        )}
+                      >
+                        {blocked ? (
+                          <span>
+                            ⚠ Do-Not-Admit: this guest is flagged on the blacklist
+                            {g?.blacklistReason ? ` — ${g.blacklistReason}` : ""}. Check-in is
+                            blocked; escalate to the Duty Manager.
+                          </span>
+                        ) : (
+                          <span>
+                            ✓ Identity document checked against the guest blacklist. No security
+                            flags on this profile.
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

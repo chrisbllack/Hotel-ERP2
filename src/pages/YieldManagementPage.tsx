@@ -255,7 +255,7 @@ export default function YieldManagementPage() {
                             )}
                           >
                             {isIncrease ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                            {rec.percentageAdjustment > 0 ? `+${rec.percentageAdjustment}` : rec.percentageAdjustment}%
+                            {(rec.percentageAdjustment ?? 0) > 0 ? `+${rec.percentageAdjustment}` : (rec.percentageAdjustment ?? 0)}%
                           </span>
                         </div>
                       </div>
@@ -267,8 +267,8 @@ export default function YieldManagementPage() {
                         <strong className="text-brand-50">Demand Driver:</strong> {rec.rationale}
                       </p>
                       <div className="flex items-center gap-4 text-brand-200/60 text-[11px]">
-                        <span>Projected RevPAR Gain: <strong className="text-emerald-300">+{naira(rec.projectedRevparGain)}</strong></span>
-                        <span>CompSet Average: <strong>{naira(rec.competitorAvgRate)}</strong></span>
+                        <span>Projected RevPAR Gain: <strong className="text-emerald-300">+{naira(rec.projectedRevparGain ?? rec.projectedRevPARGain ?? 0)}</strong></span>
+                        <span>CompSet Average: <strong>{naira(rec.competitorAvgRate ?? 0)}</strong></span>
                       </div>
                     </div>
                   </div>
@@ -495,10 +495,10 @@ export default function YieldManagementPage() {
                   <span
                     className={cn(
                       "font-mono font-bold",
-                      rule.actionAdjustmentPercent > 0 ? "text-emerald-400" : "text-amber-400"
+                      (rule.actionAdjustmentPercent ?? 0) > 0 ? "text-emerald-400" : "text-amber-400"
                     )}
                   >
-                    {rule.actionAdjustmentPercent > 0 ? `+${rule.actionAdjustmentPercent}%` : `${rule.actionAdjustmentPercent}%`} BAR
+                    {(rule.actionAdjustmentPercent ?? 0) > 0 ? `+${rule.actionAdjustmentPercent}%` : `${rule.actionAdjustmentPercent}%`} BAR
                   </span>
                 </div>
               </div>

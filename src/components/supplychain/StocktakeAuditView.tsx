@@ -11,7 +11,7 @@ export function StocktakeAuditView() {
     stocktakeAudits[0] || null
   );
 
-  const totalVarianceCost = stocktakeAudits.reduce((acc, a) => acc + a.netVarianceCost, 0);
+  const totalVarianceCost = stocktakeAudits.reduce((acc, a) => acc + (a.netVarianceCost ?? a.varianceValue ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -60,7 +60,7 @@ export function StocktakeAuditView() {
           <div className="divide-y divide-brand-800/40">
             {stocktakeAudits.map((a) => {
               const isSelected = a.id === selectedAudit?.id;
-              const hasLoss = a.netVarianceCost < 0;
+              const hasLoss = (a.netVarianceCost ?? a.varianceValue ?? 0) < 0;
 
               return (
                 <button
@@ -89,7 +89,7 @@ export function StocktakeAuditView() {
                         </Badge>
                       </div>
                       <h4 className="font-medium text-sm text-brand-50 mt-1">{a.storeName}</h4>
-                      <p className="text-xs text-brand-200/60">{a.auditedBy} · {a.date}</p>
+                      <p className="text-xs text-brand-200/60">{a.auditedBy ?? a.auditorName} · {a.date ?? a.auditDate}</p>
                     </div>
                     <div className="text-right">
                       <span
@@ -97,7 +97,7 @@ export function StocktakeAuditView() {
                           hasLoss ? "text-rose-400" : "text-emerald-400"
                         }`}
                       >
-                        {naira(a.netVarianceCost)}
+                        {naira(a.netVarianceCost ?? a.varianceValue ?? 0)}
                       </span>
                       <p className="text-[10px] text-brand-300/60 mt-0.5">Net Variance</p>
                     </div>
@@ -129,10 +129,10 @@ export function StocktakeAuditView() {
                 <span className="text-xs text-brand-200/60">Net Variance Impact</span>
                 <p
                   className={`font-display text-2xl font-bold ${
-                    selectedAudit.netVarianceCost < 0 ? "text-rose-400" : "text-emerald-400"
+                    (selectedAudit.netVarianceCost ?? selectedAudit.varianceValue ?? 0) < 0 ? "text-rose-400" : "text-emerald-400"
                   }`}
                 >
-                  {naira(selectedAudit.netVarianceCost)}
+                  {naira(selectedAudit.netVarianceCost ?? selectedAudit.varianceValue ?? 0)}
                 </p>
                 <p className="text-[11px] text-brand-300/60">Status: {selectedAudit.status}</p>
               </div>
@@ -157,33 +157,34 @@ export function StocktakeAuditView() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-brand-800/30">
-                    {selectedAudit.items.map((item, idx) => {
-                      const isNegative = item.variance < 0;
+                    {(selectedAudit.items ?? selectedAudit.itemsSample ?? []).map((item, idx) => {
+                      const variance = item.variance ?? item.varianceQty ?? 0;
+                      const isNegative = variance < 0;
 
                       return (
                         <tr key={idx} className="hover:bg-brand-800/20">
-                          <td className="px-4 py-2.5 font-medium text-brand-100">{item.productName}</td>
+                          <td className="px-4 py-2.5 font-medium text-brand-100">{item.productName ?? item.name}</td>
                           <td className="px-3 py-2.5 text-right font-mono text-brand-300">
-                            {item.systemQuantity} {item.unit}
+                            {item.systemQuantity ?? item.systemQty} {item.unit ?? ""}
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-brand-100 font-semibold">
-                            {item.physicalQuantity} {item.unit}
+                            {item.physicalQuantity ?? item.physicalQty} {item.unit ?? ""}
                           </td>
                           <td
                             className={`px-3 py-2.5 text-right font-mono font-bold ${
                               isNegative ? "text-rose-400" : "text-emerald-400"
                             }`}
                           >
-                            {item.variance > 0 ? `+${item.variance}` : item.variance} {item.unit}
+                            {variance > 0 ? `+${variance}` : variance} {item.unit ?? ""}
                           </td>
                           <td
                             className={`px-4 py-2.5 text-right font-mono font-semibold ${
                               isNegative ? "text-rose-400" : "text-emerald-400"
                             }`}
                           >
-                            {naira(item.varianceCost)}
+                            {naira(item.varianceCost ?? item.costImpact ?? 0)}
                           </td>
-                          <td className="px-4 py-2.5 text-brand-300/70 text-[11px]">{item.notes}</td>
+                          <td className="px-4 py-2.5 text-brand-300/70 text-[11px]">{item.notes ?? item.reason ?? ""}</td>
                         </tr>
                       );
                     })}

@@ -52,3 +52,56 @@ Every feature must include:
 - UI (where applicable)
 - Tests
 - Documentation
+
+## Discovered Repository Facts (verified)
+
+The descriptions above describe a target multi-service architecture. The
+current working tree is a **single Vite + React 19 + TypeScript SPA** rooted at
+`src/`, with a Convex backend under `src/convex/`. Treat these as the source of
+truth for local work:
+
+- **Build / verify**: `npm run build` (must stay green). `npm run typecheck`
+  and `npm run test` are aliases for `tsc -b --noEmit`. `npm run lint` runs
+  `oxlint src`.
+- **Unit tests** live in `src/tests/*.test.ts` and target the pure logic in
+  `src/convex/lib.ts`. They use `bun:test`, but **Bun is not installed** in the
+  default environment; run them elsewhere with `bun test`.
+- **Pre-existing type debt**: `tsc` reports ~305 errors at rest, concentrated in
+  feature modules never wired to the type layer (fnb views, maintenance audit,
+  yield, supply chain). These do **not** block `npm run build`, which is the
+  real gate. Do not assume a type error you introduce is yours — compare the
+  count before/after.
+- **Theming**: 7 selectable identities in `src/theme/themes.ts`; palette values
+  are CSS custom properties under `html[data-theme="..."]` in `src/index.css`.
+  `ThemeProvider` writes `data-theme` on `<html>` and persists to
+  `localStorage["infineon.theme"]`.
+- **Markets / localization**: `src/i18n/markets.ts` holds US/IN/NG/CN profiles
+  (currency, locale, tax, fiscal year). `MarketProvider` calls
+  `configureFormatter(marketId)` in `src/lib/utils.ts`; `money()` / `naira()`
+  then format in the active currency. Because those formatters are read at
+  render time, `App` re-renders its routed subtree via a `key={marketId}` on
+  `<AppRoutes>` when the market changes (providers above the key stay mounted so
+  auth/platform state survives the switch).
+- **UI primitives**: `src/components/ui/primitives.tsx` (Card, Badge, Table,
+  Td, PageHeader). `Badge` `tone` is a narrow union — confirm allowed values
+  before using a new colour.
+
+## Agent team (verified)
+
+The project is built by a parallel team of file-based sub-agents under
+`.agents/agents/` (`ai-cto`, `ai-product-manager`, `ai-ui-ux-designer`,
+`ai-frontend-engineer`, `ai-backend-engineer`, `ai-qa-engineer`,
+`ai-devops-sre`, `ai-security-engineer`, `ai-technical-writer`). See
+[`docs/Enterprise/AGENT-TEAM.md`](docs/Enterprise/AGENT-TEAM.md) for the
+operating model. Agents are scanned at conversation start, not hot-reloaded —
+start a new conversation after editing an agent file. Delegate by `name` via the
+task tool.
+
+- **Baseline status (verified)**: `npm run typecheck` reports **0 errors**;
+  `npm run build` passes; `npm run lint` reports only warnings (fast-refresh /
+  React purity), no errors. Keep it that way — this is the real gate.
+- **Financing / inventory / localization / theming** surface files:
+  `src/components/finance/FinancialAgilityView.tsx`,
+  `src/components/inventory/AdvancedStockControlView.tsx`,
+  `src/data/financeOpsData.ts`, `src/pages/localization/LocalizationPage.tsx`,
+  `src/theme/*`, `src/i18n/*`.

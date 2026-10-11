@@ -23,13 +23,12 @@ export function BanquetEventOrdersView() {
   const [pax, setPax] = useState(200);
   const [amount, setAmount] = useState(12000000);
 
-  const totalContractValue = banquetOrders.reduce((acc, b) => acc + b.contractAmount, 0);
-  const totalDeposits = banquetOrders.reduce((acc, b) => acc + b.depositPaid, 0);
+  const totalContractValue = banquetOrders.reduce((acc, b) => acc + (b.contractAmount ?? b.totalBudget ?? 0), 0);
+  const totalDeposits = banquetOrders.reduce((acc, b) => acc + (b.depositPaid ?? b.depositReceived ?? 0), 0);
 
   const handleCreateBeo = (e: React.FormEvent) => {
     e.preventDefault();
     createBanquetOrder({
-      beoNumber: `BEO-2026-${Math.floor(100 + Math.random() * 900)}`,
       clientName,
       eventName,
       eventDate,
@@ -65,7 +64,7 @@ export function BanquetEventOrdersView() {
         />
         <StatCard
           label="Guaranteed Covers"
-          value={String(banquetOrders.reduce((a, b) => a + b.guaranteedPax, 0))}
+          value={String(banquetOrders.reduce((a, b) => a + (b.guaranteedPax ?? b.guaranteedCovers ?? 0), 0))}
           sub="Catering production target"
           accent="sky"
         />
@@ -131,7 +130,7 @@ export function BanquetEventOrdersView() {
                     </div>
                     <div className="text-right">
                       <span className="font-mono text-sm font-semibold text-brand-100">
-                        {naira(b.contractAmount, true)}
+                        {naira(b.contractAmount ?? b.totalBudget ?? 0, true)}
                       </span>
                       <p className="text-[11px] text-brand-300/60 mt-0.5">{b.eventDate}</p>
                     </div>
@@ -172,10 +171,10 @@ export function BanquetEventOrdersView() {
               <div className="text-right">
                 <span className="text-xs text-brand-200/60">Contract Value</span>
                 <p className="font-display text-2xl font-bold text-gold-300">
-                  {naira(selectedBeo.contractAmount)}
+                  {naira(selectedBeo.contractAmount ?? selectedBeo.totalBudget ?? 0)}
                 </p>
                 <p className="text-xs text-emerald-400 font-mono">
-                  Deposit: {naira(selectedBeo.depositPaid)}
+                  Deposit: {naira(selectedBeo.depositPaid ?? selectedBeo.depositReceived ?? 0)}
                 </p>
               </div>
             </div>
@@ -195,7 +194,7 @@ export function BanquetEventOrdersView() {
                   Staging &amp; Audio-Visual Setup
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {selectedBeo.avRequirements.map((av, idx) => (
+                  {(selectedBeo.avRequirements ?? []).map((av, idx) => (
                     <span
                       key={idx}
                       className="rounded-lg border border-brand-700 bg-brand-900/80 px-2.5 py-1 text-xs text-brand-200"

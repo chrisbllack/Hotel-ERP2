@@ -10,15 +10,15 @@ import {
 } from "lucide-react";
 
 export function GoodsReceiptView() {
-  const { goodsReceiptNotes, receiveGrn } = usePlatform();
+  const { goodsReceivedNotes, postGrn } = usePlatform();
   const [selectedGrn, setSelectedGrn] = useState<GoodsReceivedNote | null>(
-    goodsReceiptNotes[0] || null
+    goodsReceivedNotes[0] || null
   );
 
-  const totalReceivedValue = goodsReceiptNotes
+  const totalReceivedValue = goodsReceivedNotes
     .filter((g) => g.status === "received")
-    .reduce((acc, g) => acc + g.totalValue, 0);
-  const inspectionPassedCount = goodsReceiptNotes.filter((g) => g.qualityInspectionPassed).length;
+    .reduce((acc, g) => acc + (g.totalValue || g.totalAcceptedValue || 0), 0);
+  const inspectionPassedCount = goodsReceivedNotes.filter((g) => g.qualityInspectionPassed).length;
 
   return (
     <div className="space-y-6">
@@ -32,7 +32,7 @@ export function GoodsReceiptView() {
         />
         <StatCard
           label="Quality Pass Rate"
-          value={`${Math.round((inspectionPassedCount / (goodsReceiptNotes.length || 1)) * 100)}%`}
+          value={`${Math.round((inspectionPassedCount / (goodsReceivedNotes.length || 1)) * 100)}%`}
           sub="Cold chain & specs check"
           accent="gold"
         />
@@ -64,7 +64,7 @@ export function GoodsReceiptView() {
             <p className="text-xs text-brand-200/60">PO fulfillment and quality inspection logs</p>
           </div>
           <div className="divide-y divide-brand-800/40">
-            {goodsReceiptNotes.map((g) => {
+            {goodsReceivedNotes.map((g) => {
               const isSelected = g.id === selectedGrn?.id;
               const isReceived = g.status === "received";
 
@@ -101,7 +101,7 @@ export function GoodsReceiptView() {
                     </div>
                     <div className="text-right">
                       <span className="font-mono text-sm font-semibold text-brand-100">
-                        {naira(g.totalValue)}
+                        {naira(g.totalValue ?? g.totalAcceptedValue)}
                       </span>
                       <p className="text-[11px] text-brand-300/60 mt-0.5">{g.receivedDate}</p>
                     </div>
@@ -132,7 +132,7 @@ export function GoodsReceiptView() {
               <div className="text-right">
                 <span className="text-xs text-brand-200/60">Verified Total</span>
                 <p className="font-display text-2xl font-bold text-gold-300">
-                  {naira(selectedGrn.totalValue)}
+                  {naira(selectedGrn.totalValue ?? selectedGrn.totalAcceptedValue)}
                 </p>
                 <p className="text-[11px] text-brand-300/60">Received by: {selectedGrn.receivedBy}</p>
               </div>
@@ -186,21 +186,21 @@ export function GoodsReceiptView() {
                   <tbody className="divide-y divide-brand-800/30">
                     {selectedGrn.items.map((item, idx) => (
                       <tr key={idx} className="hover:bg-brand-800/20">
-                        <td className="px-4 py-2.5 font-medium text-brand-100">{item.itemName}</td>
+                        <td className="px-4 py-2.5 font-medium text-brand-100">{item.itemName || item.name}</td>
                         <td className="px-3 py-2.5 text-right font-mono text-brand-300">
-                          {item.quantityOrdered} {item.unit}
+                          {item.quantityOrdered ?? item.orderedQty} {item.unit}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono text-emerald-400 font-semibold">
-                          {item.quantityReceived} {item.unit}
+                          {item.quantityReceived ?? item.receivedQty} {item.unit}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono text-rose-400">
-                          {item.quantityRejected} {item.unit}
+                          {item.quantityRejected ?? item.rejectedQty} {item.unit}
                         </td>
                         <td className="px-4 py-2.5 text-right font-mono text-brand-200">
-                          {naira(item.unitPrice)}
+                          {naira(item.unitPrice ?? item.unitCost)}
                         </td>
                         <td className="px-4 py-2.5 text-right font-mono font-semibold text-gold-300">
-                          {naira(item.total)}
+                          {naira(item.total ?? (item.unitPrice ?? item.unitCost) * (item.quantityReceived ?? item.receivedQty))}
                         </td>
                       </tr>
                     ))}
@@ -211,7 +211,7 @@ export function GoodsReceiptView() {
               {selectedGrn.status === "inspecting" && (
                 <div className="mt-5 flex justify-end">
                   <button
-                    onClick={() => receiveGrn(selectedGrn.id)}
+                    onClick={() => postGrn(selectedGrn.id)}
                     className="flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-brand-950 hover:bg-emerald-400 transition"
                   >
                     <CheckCircle size={15} />

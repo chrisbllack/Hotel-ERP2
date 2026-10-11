@@ -58,7 +58,7 @@ export function KitchenPrepView() {
 
   // Live Occupancy & Demand Metrics Calculation
   const totalRooms = rooms.length;
-  const occupiedRooms = rooms.filter((r) => r.status === "occupied").length;
+  const occupiedRooms = rooms.filter((r) => (r.status as string).startsWith("occupied")).length;
   const occupancyRate = Math.round((occupiedRooms / (totalRooms || 1)) * 100);
   const inHouseGuests = occupiedRooms * 1.6; // average guests per occupied room ~1.6
   const activeReservationsToday = reservations.filter((r) => r.status === "confirmed" || r.status === "checked_in").length;

@@ -18,7 +18,7 @@ export function KitchenDisplayView() {
   const [stationFilter, setStationFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const stations: Array<{ id: KitchenTicket["station"]; name: string; icon: any }> = [
+  const stations: Array<{ id: NonNullable<KitchenTicket["station"]>; name: string; icon: any }> = [
     { id: "hot_kitchen", name: "Hot Line / Grill", icon: Flame },
     { id: "cold_larder", name: "Pantry / Cold Larder", icon: Snowflake },
     { id: "pastry", name: "Pastry & Bakery", icon: Cake },
@@ -71,7 +71,7 @@ export function KitchenDisplayView() {
         />
         <StatCard
           label="Priority Expedited"
-          value={String(kitchenTickets.filter((t) => t.priority === "rush").length)}
+          value={String(kitchenTickets.filter((t) => t.priority === "urgent").length)}
           sub="VIP & Suite guests"
           accent="rose"
         />
@@ -127,7 +127,7 @@ export function KitchenDisplayView() {
       {/* Ticket Cards Grid (KDS Rail) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredTickets.map((t) => {
-          const isRush = t.priority === "rush";
+          const isRush = t.priority === "urgent";
           const isFired = t.status === "fired";
           const isPreparing = t.status === "preparing";
           const isReady = t.status === "ready";

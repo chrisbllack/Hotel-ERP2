@@ -42,7 +42,7 @@ export class GuestPortalService {
   /**
    * Validate mobile digital key / room access token
    */
-  public static validateToken(roomId: string, token?: string): boolean {
+  public static validateToken(_roomId: string, token?: string): boolean {
     if (!token) return true; // Demo fallback
     return token.startsWith("RFID-") || token.startsWith("DIGIKEY-") || token.length > 4;
   }

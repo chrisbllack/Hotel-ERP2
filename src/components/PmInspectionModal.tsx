@@ -26,7 +26,7 @@ export default function PmInspectionModal({
   const { logPmInspection } = usePlatform();
 
   const [technicianName, setTechnicianName] = useState("Engr. Emeka Okonkwo (Chief Engineer)");
-  const [inspectedTarget, setInspectedTarget] = useState(schedule.targetLocations[0] || "Room 101");
+  const [inspectedTarget, setInspectedTarget] = useState(schedule.targetLocations?.[0] || "Room 101");
   const [result, setResult] = useState<"passed" | "passed_minor_issues" | "failed_repair_needed">("passed");
   const [notes, setNotes] = useState("");
 
@@ -117,7 +117,7 @@ export default function PmInspectionModal({
                 onChange={(e) => setInspectedTarget(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-brand-700 bg-brand-900 px-3 py-2 text-xs text-brand-50 focus:border-gold-500 focus:outline-none"
               >
-                {schedule.targetLocations.map((loc) => (
+                {(schedule.targetLocations ?? []).map((loc) => (
                   <option key={loc} value={loc}>
                     {loc}
                   </option>

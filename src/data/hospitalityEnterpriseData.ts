@@ -1902,9 +1902,9 @@ export const initialKitchenPrepItems: KitchenPrepItem[] = [
 
 export function generateCashFlowForecast(
   startDateStr: string,
-  reservations: Reservation[],
-  cityLedgerAccounts: CityLedgerAccount[],
-  accountsPayableInvoices: AccountsPayableInvoice[],
+  _reservations: Reservation[],
+  _cityLedgerAccounts: CityLedgerAccount[],
+  _accountsPayableInvoices: AccountsPayableInvoice[],
   employees: Employee[],
   scenario: CashFlowScenario = { occupancyAdjustmentPct: 0, arCollectionDelayDays: 0, capexFreeze: false }
 ): DailyCashFlowEntry[] {

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   guests as seedGuests,
   reservations as seedReservations,
@@ -8,6 +8,7 @@ import {
   posOrderLines as seedOrderLines,
   guestStays as seedStays,
   folios as seedFolios,
+  folioLines as seedFolioLines,
   menuItems as seedMenuItems,
   employees as seedEmployees,
 } from "../data/demo";
@@ -24,6 +25,7 @@ import type {
   PosOrder,
   PosOrderLine,
   Reservation,
+  ReservationStatus,
   Room,
   RoomStatus,
   ShiftHandoverRecord,
@@ -110,6 +112,23 @@ import {
 export const VAT_RATE = 0.075;
 export const SERVICE_CHARGE_RATE = 0.10;
 export const CONSUMPTION_TAX_RATE = 0.05;
+
+/**
+ * Pure ledger helper — the single source of truth for a folio balance.
+ * Sign convention: credit lines (payments/deposits) are negative, debit lines
+ * (charges) are positive, so a folio that is paid in full nets to exactly 0.
+ * Every state transition that touches a folio should recompute the balance with
+ * this function rather than incrementally adding/subtracting, which drifts.
+ */
+export function computeFolioBalance(lines: FolioLine[], folioId: string): number {
+  return lines
+    .filter((l) => l.folioId === folioId)
+    .reduce((acc, l) => acc + (Number(l.amount) || 0), 0);
+}
+
+export function round2(n: number): number {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
 
 export interface WalkInInput {
   firstName: string;
@@ -307,8 +326,9 @@ export interface PlatformState {
   storeTransfers: StoreTransferRecord[];
   stocktakeAudits: StocktakeAuditRecord[];
   createPurchaseRequisition: (req: Omit<PurchaseRequisition, "id" | "requisitionNumber" | "requestDate">) => PurchaseRequisition;
-  approvePurchaseRequisition: (reqId: string, poNumber: string) => void;
+  approvePurchaseRequisition: (reqId: string, poNumber?: string) => void;
   receiveGrn: (grn: Omit<GoodsReceivedNote, "id" | "grnNumber" | "receivedDate">) => GoodsReceivedNote;
+  postGrn: (grnId: string) => void;
   createStoreTransfer: (transfer: Omit<StoreTransferRecord, "id" | "transferNumber" | "transferDate">) => StoreTransferRecord;
   recordStocktakeAudit: (audit: Omit<StocktakeAuditRecord, "id" | "auditNumber" | "auditDate">) => StocktakeAuditRecord;
 
@@ -391,71 +411,6 @@ const seedTraces: GuestTrace[] = [
   },
 ];
 
-// Initial Folio lines seed for existing in-house folios
-const seedInitialFolioLines: FolioLine[] = [
-  {
-    id: "fl-1",
-    folioId: "folio-stay-001",
-    window: 1,
-    type: "debit",
-    description: "Room Charge - Deluxe Suite (Night 1)",
-    amount: 40000,
-    subtotal: 34042.55,
-    taxAmount: 5957.45,
-    department: "Rooms",
-    date: "2026-09-04",
-  },
-  {
-    id: "fl-2",
-    folioId: "folio-stay-001",
-    window: 2,
-    type: "debit",
-    description: "The Palms Restaurant - Dinner Bill #ORD-1014",
-    amount: 14500,
-    subtotal: 12340.42,
-    taxAmount: 2159.58,
-    department: "F&B",
-    date: "2026-09-04",
-  },
-  {
-    id: "fl-3",
-    folioId: "folio-stay-001",
-    window: 1,
-    type: "credit",
-    description: "Credit Card Advance Deposit - Visa ...4821",
-    amount: -40000,
-    subtotal: -40000,
-    taxAmount: 0,
-    department: "Cashiering",
-    date: "2026-09-04",
-    paymentMethod: "card",
-  },
-  {
-    id: "fl-4",
-    folioId: "folio-stay-002",
-    window: 1,
-    type: "debit",
-    description: "Room Charge - Executive Suite (Night 1)",
-    amount: 65000,
-    subtotal: 55319.15,
-    taxAmount: 9680.85,
-    department: "Rooms",
-    date: "2026-09-04",
-  },
-  {
-    id: "fl-5",
-    folioId: "folio-stay-002",
-    window: 2,
-    type: "debit",
-    description: "Lagoon Bar - Cocktail & Hors d'oeuvres",
-    amount: 8500,
-    subtotal: 7234,
-    taxAmount: 1266,
-    department: "F&B",
-    date: "2026-09-04",
-  },
-];
-
 export function PlatformProvider({ children }: { children: ReactNode }) {
   const [businessDate, setBusinessDate] = useState<string>("2026-09-05");
   const [rooms, setRooms] = useState<Room[]>(() =>
@@ -476,7 +431,25 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
   const [reservations, setReservations] = useState<Reservation[]>(seedReservations);
   const [stays, setStays] = useState<GuestStay[]>(seedStays);
   const [folios, setFolios] = useState<Folio[]>(seedFolios);
-  const [folioLines, setFolioLines] = useState<FolioLine[]>(seedInitialFolioLines);
+  const [folioLines, setFolioLines] = useState<FolioLine[]>(seedFolioLines);
+
+  // Reconcile every folio balance from its line items. The lines are the ledger
+  // of record; the header balance is a derived cache. Doing this centrally means
+  // no individual action can leave a folio header drifting from its lines.
+  useEffect(() => {
+    setFolios((prev) => {
+      let changed = false;
+      const next = prev.map((f) => {
+        const derived = round2(computeFolioBalance(folioLines, f.id));
+        if (Math.abs((f.balance || 0) - derived) < 0.005) return f;
+        changed = true;
+        return { ...f, balance: derived };
+      });
+      return changed ? next : prev;
+    });
+    // Only folioLines drives the reconciliation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folioLines]);
   const [tasks, setTasks] = useState<HousekeepingTask[]>(seedTasks);
   const [orders, setOrders] = useState<PosOrder[]>(seedOrders);
   const [orderLines, setOrderLines] = useState<PosOrderLine[]>(seedOrderLines);
@@ -614,14 +587,25 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
   // Check In with Room Assignment, Key Card Encode & Folio Creation
   const checkIn = useCallback(
     (reservationId: string, options?: Partial<CheckInOptions>) => {
+      const currentRes = reservations.find((r) => r.id === reservationId);
+      if (!currentRes) return;
+      const targetRoomId = options?.assignedRoomId || currentRes.roomId;
+      if (!targetRoomId) return;
+
+      // Hotel invariant: a room can only be sold if it is clean and vacant.
+      // Never check a guest into an occupied, reserved, dirty or out-of-order room.
+      const targetRoom = rooms.find((rm) => rm.id === targetRoomId);
+      if (!targetRoom || targetRoom.status !== "vacant_clean") {
+        return;
+      }
+
       setReservations((prev) =>
         prev.map((r) => {
           if (r.id !== reservationId) return r;
-          const assignedRoomId = options?.assignedRoomId || r.roomId;
           return {
             ...r,
             status: "checked_in",
-            roomId: assignedRoomId,
+            roomId: targetRoomId,
             specialRequests: options?.specialRequests || r.specialRequests,
             checkedInAt: `${businessDate} 14:00`,
             keyCardsIssued: (r.keyCardsIssued || 0) + 1,
@@ -632,8 +616,6 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       setReservations((prev) => {
         const res = prev.find((r) => r.id === reservationId);
         if (!res) return prev;
-        const targetRoomId = options?.assignedRoomId || res.roomId;
-        if (!targetRoomId) return prev;
 
         const stayId = `stay-${res.id}`;
         setStays((s) => {
@@ -705,7 +687,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
         return prev;
       });
     },
-    [businessDate]
+    [businessDate, reservations, rooms]
   );
 
   // Check Out & Trigger Housekeeping Dirty Task
@@ -770,16 +752,36 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
   // Room Move / Transfer
   const roomMove = useCallback(
     ({ reservationId, toRoomId, reason, isComplimentary, rateAdjustment = 0 }: RoomMoveInput) => {
-      let fromRoomId = "";
+      const res = reservations.find((r) => r.id === reservationId);
+      if (!res) return;
+      const fromRoomId = res.roomId || "";
+      if (fromRoomId === toRoomId) return;
+
+      // Target must be sellable — cannot move a guest into an occupied, dirty or OOO room.
+      const target = rooms.find((rm) => rm.id === toRoomId);
+      if (!target || target.status !== "vacant_clean") return;
+
+      const stayId = `stay-${res.id}`;
+      const oldNightlyRate = res.ratePerNight || 0;
+      const newNightlyRate = isComplimentary
+        ? oldNightlyRate
+        : Math.max(0, oldNightlyRate + rateAdjustment);
+
       setReservations((prev) =>
         prev.map((r) => {
           if (r.id !== reservationId) return r;
-          fromRoomId = r.roomId || "";
           return {
             ...r,
             roomId: toRoomId,
+            // Adjust the remaining-stay estimate by the per-night delta × nights,
+            // instead of adding a one-off amount (which mis-stated the folio total).
+            totalEstimate: Math.max(
+              0,
+              r.totalEstimate + (newNightlyRate - oldNightlyRate) * Math.max(r.nights, 1)
+            ),
+            ratePerNight: newNightlyRate,
+            rateAdjustment: isComplimentary ? r.rateAdjustment : (r.rateAdjustment || 0) + rateAdjustment,
             specialRequests: `${r.specialRequests || ""} [Room move from ${fromRoomId}: ${reason}]`.trim(),
-            totalEstimate: isComplimentary ? r.totalEstimate : r.totalEstimate + rateAdjustment,
           };
         })
       );
@@ -788,7 +790,17 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
         prev.map((s) => (s.reservationId === reservationId ? { ...s, roomId: toRoomId } : s))
       );
 
-      // Old room becomes vacant_dirty
+      // Carry the open folio across the move so charges stay on the same account.
+      const targetNumber = target.number;
+      setFolios((prev) =>
+        prev.map((f) =>
+          f.guestStayId === stayId || f.id === `folio-${stayId}`
+            ? { ...f, roomNumber: targetNumber }
+            : f
+        )
+      );
+
+      // Old room becomes vacant_dirty; new room occupied.
       if (fromRoomId) {
         setRooms((rs) =>
           rs.map((rm) => {
@@ -819,7 +831,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
         ]);
       }
     },
-    []
+    [reservations, rooms]
   );
 
   // Room Status & OOO/OOS Management
@@ -1009,15 +1021,20 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
     inHouse.forEach((res) => {
       const stay = stays.find((s) => s.reservationId === res.id);
       if (!stay) return;
-      const folio = folios.find((f) => f.guestStayId === stay.id);
+      const folio = folios.find((f) => f.guestStayId === stay.id || f.id === `folio-${stay.id}`);
       if (!folio) return;
 
       const room = rooms.find((rm) => rm.id === res.roomId);
-      const nightlyRate =
-        res.ratePerNight || (res.totalEstimate ? res.totalEstimate / Math.max(res.nights, 1) : 35000);
-      const vat = Math.round(nightlyRate * VAT_RATE);
-      const sc = Math.round(nightlyRate * SERVICE_CHARGE_RATE);
-      const totalNightCharge = nightlyRate + vat + sc;
+      // ratePerNight is the net (exclusive) rate: tax and service charge are added on top.
+      const nightlyRate = round2(
+        res.ratePerNight ||
+          (res.totalEstimate
+            ? res.totalEstimate / Math.max(res.nights, 1) / (1 + VAT_RATE + SERVICE_CHARGE_RATE)
+            : 35000)
+      );
+      const vat = round2(nightlyRate * VAT_RATE);
+      const sc = round2(nightlyRate * SERVICE_CHARGE_RATE);
+      const totalNightCharge = round2(nightlyRate + vat + sc);
 
       folioLineSeq += 1;
       const chargeLine: FolioLine = {
@@ -1036,9 +1053,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
 
       setFolioLines((prev) => [...prev, chargeLine]);
       setFolios((prev) =>
-        prev.map((f) =>
-          f.id === folio.id ? { ...f, balance: f.balance - totalNightCharge } : f
-        )
+        prev.map((f) => (f.id === folio.id ? { ...f, balance: round2(f.balance - totalNightCharge) } : f))
       );
 
       roomsCharged += 1;
@@ -1057,6 +1072,58 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       })
     );
 
+    // Close departures whose stay ends on/before the closing business date and
+    // release the room, mirroring the checkout path (folio closed, key revoked,
+    // room turned over). Without this the business date silently drifts past
+    // in-house guests who were never actually checked out.
+    const departing = reservations.filter(
+      (r) => r.status === "checked_in" && r.departureDate <= businessDate
+    );
+    if (departing.length > 0) {
+      const departureIds = new Set(departing.map((r) => r.id));
+      const roomIds = new Set(departing.map((r) => r.roomId).filter(Boolean) as string[]);
+      const stayIds = new Set(departing.map((r) => `stay-${r.id}`));
+
+      setReservations((prev) =>
+        prev.map((r) =>
+          departureIds.has(r.id)
+            ? { ...r, status: "checked_out", checkedOutAt: `${businessDate} 11:30` }
+            : r
+        )
+      );
+      setStays((prev) =>
+        prev.map((s) =>
+          departureIds.has(s.reservationId)
+            ? { ...s, status: "departed", actualDeparture: `${businessDate} 11:30` }
+            : s
+        )
+      );
+      setFolios((prev) =>
+        prev.map((f) => (stayIds.has(f.guestStayId) ? { ...f, status: "closed" } : f))
+      );
+      setKeyCards((prev) =>
+        prev.map((kc) => (departureIds.has(kc.reservationId) ? { ...kc, status: "revoked" } : kc))
+      );
+      setRooms((prev) =>
+        prev.map((rm) =>
+          roomIds.has(rm.id)
+            ? { ...rm, status: "vacant_dirty" as RoomStatus, housekeepingStatus: "dirty" }
+            : rm
+        )
+      );
+      setTasks((prev) => [
+        ...prev,
+        ...[...roomIds].map((roomId) => ({
+          id: `hk-out-${roomId}-${businessDate}`,
+          roomId,
+          taskType: "Checkout Cleaning & Sanitization",
+          priority: "urgent" as const,
+          status: "pending" as const,
+          assignedTo: null,
+        })),
+      ]);
+    }
+
     // Advance Business Date by 1 day
     const curr = new Date(Date.parse(businessDate));
     const nextDateObj = new Date(curr.getTime() + 86400000);
@@ -1065,7 +1132,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
 
     return {
       roomsCharged,
-      totalPosted,
+      totalPosted: round2(totalPosted),
       noShowsHandled,
       newBusinessDate: newDateStr,
     };
@@ -1286,7 +1353,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
           setFolioLines((prev) => [lineRoom, ...prev]);
           setFolios((prev) =>
             prev.map((f) =>
-              f.id === folio.id ? { ...f, balance: f.balance + lineRoom.totalAmount } : f
+              f.id === folio.id ? { ...f, balance: f.balance + (lineRoom.totalAmount ?? 0) } : f
             )
           );
         }
@@ -1838,7 +1905,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
     return newReq;
   }, []);
 
-  const approvePurchaseRequisition = useCallback((reqId: string, poNumber: string) => {
+  const approvePurchaseRequisition = useCallback((reqId: string, poNumber?: string) => {
     setPurchaseRequisitions((prev) =>
       prev.map((r) =>
         r.id === reqId ? { ...r, status: "procurement_po_created" as const, poNumber } : r
@@ -1872,6 +1939,31 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       })
     );
     return newGrn;
+  }, []);
+
+  const postGrn = useCallback((grnId: string) => {
+    setGoodsReceivedNotes((prev) => {
+      const grn = prev.find((g) => g.id === grnId);
+      if (grn) {
+        setSupplyChainProducts((products) =>
+          products.map((p) => {
+            const item = grn.items.find((i) => i.productId === p.id);
+            if (!item) return p;
+            const accepted = (item.receivedQty ?? 0) - (item.rejectedQty ?? 0);
+            const nextQty = p.totalQuantity + accepted;
+            return {
+              ...p,
+              totalQuantity: nextQty,
+              totalValue: nextQty * p.costPrice,
+              status: nextQty > p.reorderPoint ? "healthy" : "low_stock",
+            };
+          })
+        );
+      }
+      return prev.map((g) =>
+        g.id === grnId ? { ...g, status: "posted_to_inventory" as const } : g
+      );
+    });
   }, []);
 
   const createStoreTransfer = useCallback((transfer: Omit<StoreTransferRecord, "id" | "transferNumber" | "transferDate">): StoreTransferRecord => {
@@ -2138,7 +2230,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
           id: pillowTaskId,
           roomId: targetRoomId,
           roomNumber,
-          type: "special_request",
+          taskType: "VIP Pre-Arrival Setup",
           status: "in_progress",
           assignedTo: "Housekeeping Floor Lead",
           priority: "high",
@@ -2419,6 +2511,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       createPurchaseRequisition,
       approvePurchaseRequisition,
       receiveGrn,
+      postGrn,
       createStoreTransfer,
       recordStocktakeAudit,
       supplierContracts,
@@ -2541,6 +2634,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       createPurchaseRequisition,
       approvePurchaseRequisition,
       receiveGrn,
+      postGrn,
       createStoreTransfer,
       recordStocktakeAudit,
       supplierContracts,

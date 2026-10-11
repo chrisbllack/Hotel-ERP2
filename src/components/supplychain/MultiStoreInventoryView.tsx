@@ -37,10 +37,10 @@ export function MultiStoreInventoryView() {
   });
 
   const totalStockValuation = supplyChainProducts.reduce(
-    (acc, p) => acc + p.totalStock * p.unitCost,
+    (acc, p) => acc + p.totalQuantity * p.costPrice,
     0
   );
-  const belowParCount = supplyChainProducts.filter((p) => p.totalStock <= p.reorderPoint).length;
+  const belowParCount = supplyChainProducts.filter((p) => p.totalQuantity <= p.reorderPoint).length;
 
   const handleExecuteTransfer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +52,6 @@ export function MultiStoreInventoryView() {
     if (!product) return;
 
     createStoreTransfer({
-      transferNumber: `TRF-2026-${Math.floor(100 + Math.random() * 900)}`,
       fromStoreId: transferFromStore,
       toStoreId: transferToStore,
       date: new Date().toISOString().slice(0, 10),
@@ -161,7 +160,7 @@ export function MultiStoreInventoryView() {
               <h4 className="text-xs font-bold text-brand-50 truncate">{s.name}</h4>
             </div>
             <p className="text-[11px] text-brand-300/60 font-mono">{s.code} · {s.type}</p>
-            <p className="text-[11px] text-brand-200/80">Custodian: {s.custodian}</p>
+            <p className="text-[11px] text-brand-200/80">Custodian: {(s.custodian ?? s.managerName)}</p>
           </div>
         ))}
       </div>
@@ -188,8 +187,8 @@ export function MultiStoreInventoryView() {
             </thead>
             <tbody className="divide-y divide-brand-800/30">
               {filteredProducts.map((p) => {
-                const isLow = p.totalStock <= p.reorderPoint;
-                const isOptimal = p.totalStock >= p.parLevel;
+                const isLow = p.totalQuantity <= p.reorderPoint;
+                const isOptimal = p.totalQuantity >= p.parLevel;
 
                 return (
                   <tr key={p.id} className={isLow ? "bg-rose-950/15 hover:bg-rose-950/25" : "hover:bg-brand-800/20"}>
@@ -199,12 +198,12 @@ export function MultiStoreInventoryView() {
                           {p.sku}
                         </span>
                         <p className="font-medium text-brand-100 text-sm mt-0.5">{p.name}</p>
-                        <span className="text-[10px] text-brand-300/60">Primary: {p.primarySupplier}</span>
+                        <span className="text-[10px] text-brand-300/60">Primary: {(p.primarySupplier ?? p.supplierName)}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-brand-200">{p.category}</td>
                     <td className="px-4 py-3.5 text-right font-mono text-brand-200">
-                      {naira(p.unitCost)} / {p.unit}
+                      {naira(p.costPrice)} / {p.unit}
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono text-brand-200">
                       {p.parLevel} {p.unit}
@@ -214,11 +213,11 @@ export function MultiStoreInventoryView() {
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono font-bold text-sm">
                       <span className={isLow ? "text-rose-400" : "text-brand-50"}>
-                        {p.totalStock} {p.unit}
+                        {p.totalQuantity} {p.unit}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono text-gold-300 font-semibold">
-                      {naira(p.totalStock * p.unitCost)}
+                      {naira(p.totalQuantity * p.costPrice)}
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       {isLow ? (
@@ -294,7 +293,7 @@ export function MultiStoreInventoryView() {
               >
                 {supplyChainProducts.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.sku}) — Available: {p.totalStock} {p.unit}
+                    {p.name} ({p.sku}) — Available: {p.totalQuantity} {p.unit}
                   </option>
                 ))}
               </select>

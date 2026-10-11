@@ -85,7 +85,7 @@ export default function MaintenancePage() {
   const activeSchedules = pmSchedules.filter((s) => s.status === "active");
   const overdueSchedules = pmSchedules.filter((s) => s.status === "overdue" || s.nextDueDate < businessDate);
   const avgCompliance = Math.round(
-    pmSchedules.reduce((a, s) => a + s.compliancePercentage, 0) / Math.max(pmSchedules.length, 1)
+    pmSchedules.reduce((a, s) => a + (s.compliancePercentage ?? 0), 0) / Math.max(pmSchedules.length, 1)
   );
   const oooCount = rooms.filter((r) => r.status === "out_of_order" || r.status === "out_of_service").length;
   const openWork = rows.filter((x) => x.task).length;
@@ -256,7 +256,7 @@ export default function MaintenancePage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-900 text-gold-400">
-                          {getEquipmentIcon(schedule.equipmentType)}
+                          {getEquipmentIcon(schedule.equipmentType as any)}
                         </span>
                         <div>
                           <span className="font-mono text-[11px] font-semibold text-gold-400">
@@ -283,7 +283,7 @@ export default function MaintenancePage() {
                     <div className="mt-3 space-y-1 text-xs text-brand-200/70">
                       <p>
                         <span className="text-brand-200/40">Scope:</span>{" "}
-                        <span className="text-brand-100">{schedule.targetLocations.join(", ")}</span>
+                        <span className="text-brand-100">{(schedule.targetLocations ?? []).join(", ")}</span>
                       </p>
                       <p>
                         <span className="text-brand-200/40">Assigned:</span>{" "}
@@ -433,7 +433,7 @@ export default function MaintenancePage() {
                           : "bg-rose-500/20 text-rose-300"
                       )}
                     >
-                      {log.result.replace(/_/g, " ")}
+                      {(log.result ?? "").replace(/_/g, " ")}
                     </span>
                   </div>
 
@@ -576,7 +576,7 @@ export default function MaintenancePage() {
                   lastUpdated: "Just now",
                 };
 
-                const isOccupied = room.status === "occupied";
+                const isOccupied = (room.status as string).startsWith("occupied");
                 const isEco = ctrl.targetTemperature >= 24 || ctrl.hvacMode === "eco";
 
                 return (

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardHeader, Badge, Table, Td, StatCard } from "../components/ui/primitives";
 import { PageHeader } from "../components/ui/primitives";
 import { usePlatform } from "../store/platform";
-import { guests, loyaltyTiers } from "../data/demo";
+import { loyaltyTiers } from "../data/demo";
 import { initials, naira, num, cn } from "../lib/utils";
 import type { ServiceRecoveryTicket } from "../types";
 import CreateSurveyModal from "../components/CreateSurveyModal";
@@ -11,6 +11,7 @@ import {
   Crown,
   HeartHandshake,
   Plus,
+  ShieldAlert,
   Smile,
   UserCheck,
   Users,
@@ -32,7 +33,7 @@ const TIER_BADGE: Record<string, string> = {
 };
 
 export default function CrmPage() {
-  const { reservations, guestSurveys, recoveryTickets } = usePlatform();
+  const { reservations, guests, folioLines, folios, stays, traces, guestSurveys, recoveryTickets } = usePlatform();
   const [activeTab, setActiveTab] = useState<"directory" | "sentiment" | "recovery" | "loyalty">("sentiment");
   const [selectedGuest, setSelectedGuest] = useState<string | null>(null);
 
@@ -49,14 +50,42 @@ export default function CrmPage() {
     return map;
   }, [reservations]);
 
-  const spendByGuest = useMemo(() => {
+  // Realised revenue from the folio ledger (debit lines), keyed back to the
+  // guest through their stays — not a per-reservation estimate, so it reflects
+  // actual posted charges including F&B and incidentals.
+  const revenueByGuest = useMemo(() => {
+    const stayToGuest = new Map(stays.map((s) => [s.id, s.guestId]));
+    const folioToStay = new Map(folios.map((f) => [f.id, f.guestStayId]));
     const map = new Map<string, number>();
-    for (const r of reservations) map.set(r.guestId, (map.get(r.guestId) ?? 0) + r.totalEstimate);
+    for (const line of folioLines) {
+      if (line.type !== "debit") continue;
+      const stayId = folioToStay.get(line.folioId);
+      const guestId = stayId ? stayToGuest.get(stayId) : undefined;
+      if (!guestId) continue;
+      map.set(guestId, (map.get(guestId) ?? 0) + (Number(line.amount) || 0));
+    }
     return map;
-  }, [reservations]);
+  }, [folioLines, folios, stays]);
+
+  const tracesByGuest = useMemo(() => {
+    const byRes = new Map<string, typeof traces>();
+    for (const t of traces) {
+      if (!t.reservationId) continue;
+      const arr = byRes.get(t.reservationId) ?? [];
+      arr.push(t);
+      byRes.set(t.reservationId, arr);
+    }
+    const byGuest = new Map<string, typeof traces>();
+    for (const [resId, list] of byRes) {
+      const res = reservations.find((r) => r.id === resId);
+      if (!res) continue;
+      byGuest.set(res.guestId, [...(byGuest.get(res.guestId) ?? []), ...list]);
+    }
+    return byGuest;
+  }, [traces, reservations]);
 
   const tierFor = (guestId: string) => {
-    const spend = spendByGuest.get(guestId) ?? 0;
+    const spend = revenueByGuest.get(guestId) ?? 0;
     const points = Math.round(spend / 100);
     const tier = [...loyaltyTiers].reverse().find((t) => points >= t.minPoints) ?? loyaltyTiers[0];
     return { tier, points };
@@ -87,7 +116,7 @@ export default function CrmPage() {
     guestSurveys.reduce((a, s) => a + s.categories.frontDesk, 0) / totalSurveys
   ).toFixed(1);
   const avgComfort = (
-    guestSurveys.reduce((a, s) => a + s.categories.comfort, 0) / totalSurveys
+    guestSurveys.reduce((a, s) => a + (s.categories.comfort ?? s.categories.roomComfort), 0) / totalSurveys
   ).toFixed(1);
 
   const filteredSurveys = guestSurveys.filter((s) => {
@@ -356,12 +385,12 @@ export default function CrmPage() {
                       <span>Cleanliness: <strong>{survey.categories.cleanliness}★</strong></span>
                       <span>Dining: <strong>{survey.categories.dining}★</strong></span>
                       <span>Front Desk: <strong>{survey.categories.frontDesk}★</strong></span>
-                      <span>Comfort: <strong>{survey.categories.comfort}★</strong></span>
+                      <span>Comfort: <strong>{survey.categories.comfort ?? survey.categories.roomComfort}★</strong></span>
                     </div>
 
-                    {survey.highlightTags && (
+                    {(survey.highlightTags ?? survey.highlights) && (
                       <div className="flex items-center gap-1.5">
-                        {survey.highlightTags.map((tag, i) => (
+                        {(survey.highlightTags ?? survey.highlights ?? []).map((tag: string, i: number) => (
                           <span
                             key={i}
                             className="rounded bg-brand-800 px-2 py-0.5 text-[10px] text-brand-200"
@@ -489,7 +518,7 @@ export default function CrmPage() {
                     </Td>
                     <Td>{g.company || "Individual"}</Td>
                     <Td>{stays}</Td>
-                    <Td>{naira(spendByGuest.get(g.id) ?? 0, true)}</Td>
+                    <Td>{naira(revenueByGuest.get(g.id) ?? 0, true)}</Td>
                     <Td>
                       <Badge className={TIER_BADGE[tier.code]}>
                         <Crown size={10} /> {tier.name}
@@ -510,7 +539,7 @@ export default function CrmPage() {
                   <div className="rounded-lg border border-brand-800/60 bg-brand-950/60 p-3">
                     <p className="text-[11px] text-brand-200/50 uppercase font-semibold">Total Revenue Contributed</p>
                     <p className="font-mono text-lg font-bold text-emerald-400">
-                      {naira(spendByGuest.get(selected.id) ?? 0)}
+                      {naira(revenueByGuest.get(selected.id) ?? 0)}
                     </p>
                     <p className="text-[11px] text-brand-200/60 mt-1">
                       Stays on record: {stayCount.get(selected.id) ?? 0}
@@ -518,10 +547,60 @@ export default function CrmPage() {
                   </div>
 
                   <div className="rounded-lg border border-brand-800/60 bg-brand-950/60 p-3">
-                    <p className="text-[11px] text-brand-200/50 uppercase font-semibold">Preferences & Traces</p>
-                    <p className="mt-1 text-xs text-brand-100">
-                      High floor preferred, sparkling water on arrival, hypoallergenic pillows.
+                    <p className="text-[11px] text-brand-200/50 uppercase font-semibold">Preferences</p>
+                    {(selected.preferences && selected.preferences.length > 0) || selected.flagNotes ? (
+                      <ul className="mt-1 space-y-0.5 text-xs text-brand-100">
+                        {selected.preferences?.map((p) => <li key={p}>• {p}</li>)}
+                        {selected.flagNotes && <li>• {selected.flagNotes}</li>}
+                      </ul>
+                    ) : (
+                      <p className="mt-1 text-xs text-brand-200/50">No documented preferences yet.</p>
+                    )}
+                  </div>
+
+                  {selected.flags && selected.flags.length > 0 && (
+                    <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3">
+                      <p className="flex items-center gap-1 text-[11px] font-semibold uppercase text-rose-200">
+                        <ShieldAlert size={12} /> Profile Flags
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {selected.flags.map((f) => (
+                          <Badge key={f} className="border-rose-400/40 bg-rose-400/15 text-rose-100">
+                            {f}
+                          </Badge>
+                        ))}
+                      </div>
+                      {selected.blacklistReason && (
+                        <p className="mt-1.5 text-[11px] text-rose-200/80">{selected.blacklistReason}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="rounded-lg border border-brand-800/60 bg-brand-950/60 p-3">
+                    <p className="text-[11px] text-brand-200/50 uppercase font-semibold">
+                      Live Service Traces ({tracesByGuest.get(selected.id)?.length ?? 0})
                     </p>
+                    {(tracesByGuest.get(selected.id)?.length ?? 0) > 0 ? (
+                      <div className="mt-2 space-y-1.5">
+                        {tracesByGuest.get(selected.id)!.slice(0, 4).map((tr) => (
+                          <div key={tr.id} className="flex items-center justify-between gap-2 border-b border-brand-800/40 pb-1 text-[11px]">
+                            <span className="truncate text-brand-100">{tr.message}</span>
+                            <span
+                              className={cn(
+                                "shrink-0 rounded px-1.5 py-0.5",
+                                tr.status === "pending"
+                                  ? "bg-amber-500/15 text-amber-200"
+                                  : "bg-emerald-500/15 text-emerald-200"
+                              )}
+                            >
+                              {tr.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-xs text-brand-200/50">No open traces on this guest.</p>
+                    )}
                   </div>
 
                   <div className="rounded-lg border border-brand-800/60 bg-brand-950/60 p-3">
@@ -531,7 +610,7 @@ export default function CrmPage() {
                     <div className="mt-2 space-y-1.5">
                       {selectedStays.map((st) => (
                         <div key={st.id} className="flex items-center justify-between text-[11px] border-b border-brand-800/40 pb-1">
-                          <span className="font-mono text-gold-400">{st.confirmationCode}</span>
+                          <span className="font-mono text-gold-400">{st.confirmationCode ?? st.id}</span>
                           <span className="text-brand-200/70">{st.arrivalDate} – {st.departureDate}</span>
                           <span className="capitalize text-emerald-400">{st.status}</span>
                         </div>

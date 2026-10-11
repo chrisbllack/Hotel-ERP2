@@ -23,7 +23,6 @@ import {
   Package,
 } from "lucide-react";
 
-let auditCounter = 600;
 
 export function MaintenanceAuditView() {
   const {
@@ -88,7 +87,7 @@ export function MaintenanceAuditView() {
         rec.repairTicketCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
         rec.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         rec.assetTag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        rec.leadTechnicianName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (rec.leadTechnicianName ?? rec.technicianName ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         rec.location.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesCategory =
@@ -282,10 +281,10 @@ export function MaintenanceAuditView() {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-700/80 text-[10px] font-bold text-brand-100">
-                            {rec.leadTechnicianName.charAt(0)}
+                            {(rec.leadTechnicianName ?? rec.technicianName ?? "T").charAt(0)}
                           </span>
                           <span className="font-medium text-brand-100 text-xs">
-                            {rec.leadTechnicianName}
+                            {rec.leadTechnicianName ?? rec.technicianName}
                           </span>
                         </div>
                         <span className="text-[10px] text-brand-200/60 ml-6 block">
@@ -336,7 +335,7 @@ export function MaintenanceAuditView() {
                     <Td>
                       <div className="text-xs">
                         <span className="font-mono font-semibold text-emerald-400">
-                          {naira(rec.totalCost)}
+                          {naira(rec.totalCost ?? (rec.totalPartsCost + (rec.totalLaborCost ?? 0)))}
                         </span>
                         {rec.totalPartsCost > 0 && (
                           <p className="text-[10px] text-brand-200/50">
@@ -484,11 +483,11 @@ export function MaintenanceAuditView() {
                   Total Financial Impact
                 </span>
                 <p className="font-mono text-base font-bold text-emerald-400 mt-0.5">
-                  {naira(selectedRecord.totalCost)}
+                  {naira(selectedRecord.totalCost ?? (selectedRecord.totalPartsCost + (selectedRecord.totalLaborCost ?? 0)))}
                 </p>
                 <p className="text-[11px] text-brand-200/60">
-                  Labor: {naira(selectedRecord.totalLaborCost)} <br />
-                  Parts: {naira(selectedRecord.totalPartsCost)}
+                  Labor: {naira(selectedRecord.totalLaborCost ?? 0)} <br />
+                  Parts: {naira(selectedRecord.totalPartsCost ?? 0)}
                 </p>
               </div>
             </div>
@@ -756,9 +755,9 @@ function CreateMaintenanceAuditModal({ isOpen, onClose, onSubmit, businessDate }
   const [durationMinutes, setDurationMinutes] = useState(45);
   const [laborHoursLogged, setLaborHoursLogged] = useState(0.75);
   const [problemDescription, setProblemDescription] = useState("");
-  const [rootCauseAnalysis, setRootCauseAnalysis] = useState("");
+  const [rootCauseAnalysis] = useState("");
   const [actionTaken, setActionTaken] = useState("");
-  const [preventionRecommendation, setPreventionRecommendation] = useState("");
+  const [preventionRecommendation] = useState("");
   const [totalLaborCost, setTotalLaborCost] = useState(15000);
 
   // Dynamic Parts Replaced list
@@ -774,6 +773,7 @@ function CreateMaintenanceAuditModal({ isOpen, onClose, onSubmit, businessDate }
       id: `p-${Date.now()}`,
       partName: newPartName,
       partNumber: newPartNumber || `SKU-${Date.now().toString().slice(-4)}`,
+      category: "Consumables",
       quantity: Number(newPartQty) || 1,
       unitCost: Number(newPartUnitCost) || 0,
       totalCost: (Number(newPartQty) || 1) * (Number(newPartUnitCost) || 0),
@@ -796,7 +796,9 @@ function CreateMaintenanceAuditModal({ isOpen, onClose, onSubmit, businessDate }
     e.preventDefault();
     const now = `${businessDate} ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
 
+    const totalCostValue = totalPartsCost + Number(totalLaborCost);
     onSubmit({
+      workOrderNumber: `WO-${Date.now().toString().slice(-6)}`,
       assetId: `ast-${Date.now().toString().slice(-4)}`,
       assetName,
       assetTag: assetTag || `EQ-${Date.now().toString().slice(-4)}`,
@@ -809,16 +811,32 @@ function CreateMaintenanceAuditModal({ isOpen, onClose, onSubmit, businessDate }
       leadTechnicianId,
       leadTechnicianName,
       problemDescription,
+      failureReported: problemDescription,
+      diagnosis: rootCauseAnalysis || "Standard mechanical wear & tear",
       rootCauseAnalysis: rootCauseAnalysis || "Standard mechanical wear & tear",
       actionTaken,
+      technicianId: leadTechnicianId,
+      technicianName: leadTechnicianName,
+      technicianCertification: "COREN Certified Engineer",
+      technicianSignatureDate: now,
+      supervisorName: "Engr. Kenneth Okafor (Chief Engineer)",
+      taskStartedAt: `${businessDate} 10:00`,
+      taskCompletedAt: now,
+      timeTakenMinutes: Number(durationMinutes),
+      technicianHourlyRate: Number(totalLaborCost) / Math.max(Number(laborHoursLogged), 0.25),
+      laborCost: Number(totalLaborCost),
+      totalRepairCost: totalCostValue,
+      preRepairCondition: "Degraded Performance",
+      postRepairCondition: "Operational (Optimal Efficiency)",
+      downtimeHours: Number(durationMinutes) / 60,
       partsReplaced: parts,
       laborHoursLogged: Number(laborHoursLogged),
       totalPartsCost,
       totalLaborCost: Number(totalLaborCost),
-      totalCost: totalPartsCost + Number(totalLaborCost),
+      totalCost: totalCostValue,
       preventionRecommendation: preventionRecommendation || "Inspect during bi-monthly PM cycle",
       status: "completed",
-      supervisorApprovalStatus: "pending",
+      supervisorApprovalStatus: "pending_qc",
       safetyProtocolPassed: true,
     });
   };

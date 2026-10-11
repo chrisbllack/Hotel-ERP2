@@ -10,6 +10,19 @@ import { BookingShell } from "./BookingShell";
 import { BOOKING_ENABLED, fmtKobo, useEnsureSeeded } from "../../lib/booking-client";
 import { todayISO } from "../../lib/utils";
 
+interface AvailabilityRow {
+  roomTypeId: string;
+  name: string;
+  description?: string;
+  bedType?: string;
+  maxOccupancy: number;
+  available: number;
+  ratePerNight?: number;
+  rateKobo?: number;
+  code?: string;
+  amenities: string[];
+}
+
 function SearchBar({
   checkIn, checkOut, adults, busy,
   onCheckIn, onCheckOut, onAdults, onSearch,
@@ -83,7 +96,7 @@ export default function BookPage() {
       : "skip",
   );
 
-  const rows = useMemo(() => availability ?? [], [availability]);
+  const rows = useMemo<AvailabilityRow[]>(() => (availability ?? []) as AvailabilityRow[], [availability]);
   const nights = nightsBetween(submitted.checkIn, submitted.checkOut);
 
   const search = () => {
@@ -178,8 +191,8 @@ export default function BookPage() {
                   </div>
                   <div className="flex flex-col items-start justify-between gap-3 border-t border-brand-800/60 pt-4 sm:items-end sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
                     <div className="text-right">
-                      <p className="font-display text-2xl text-gold-400">{fmtKobo(r.rateKobo)}</p>
-                      <p className="text-[11px] text-brand-200/50">per night{nights > 1 && !soldOut ? ` · ${fmtKobo(r.rateKobo * nights, true)} total` : ""}</p>
+                      <p className="font-display text-2xl text-gold-400">{fmtKobo(r.rateKobo ?? r.ratePerNight ?? 0)}</p>
+                      <p className="text-[11px] text-brand-200/50">per night{nights > 1 && !soldOut ? ` · ${fmtKobo((r.rateKobo ?? r.ratePerNight ?? 0) * nights, true)} total` : ""}</p>
                     </div>
                     {soldOut ? (
                       <span className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-200">Sold out</span>

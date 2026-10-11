@@ -11,12 +11,14 @@ import {
   FileText,
   Users,
   ShieldCheck,
+  Layers,
 } from "lucide-react";
 import { MultiStoreInventoryView } from "../components/supplychain/MultiStoreInventoryView";
 import { ProcureToPayView } from "../components/supplychain/ProcureToPayView";
 import { GoodsReceiptView } from "../components/supplychain/GoodsReceiptView";
 import { StocktakeAuditView } from "../components/supplychain/StocktakeAuditView";
 import { SupplierContractView } from "../components/supplychain/SupplierContractView";
+import { AdvancedStockControlView } from "../components/inventory/AdvancedStockControlView";
 
 const PO_STATUS: Record<string, string> = {
   draft: "border-stone-400/40 bg-stone-500/10 text-stone-300",
@@ -28,11 +30,12 @@ const PO_STATUS: Record<string, string> = {
 
 export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState<
-    "multistore" | "procure" | "contracts" | "grn" | "stocktake" | "po" | "suppliers"
-  >("multistore");
+    "control" | "multistore" | "procure" | "contracts" | "grn" | "stocktake" | "po" | "suppliers"
+  >("control");
 
   const tabs: Array<[typeof activeTab, string, any]> = [
-    ["multistore", "Perpetual Stock & Stores", Boxes],
+    ["control", "Stock Control & Perpetual Ledger", Boxes],
+    ["multistore", "Multi-Store Balances", Layers],
     ["contracts", "Supplier Contracts & SLAs", ShieldCheck],
     ["procure", "Requisitions (P2P)", FileCheck2],
     ["grn", "Goods Receipts (GRN)", Truck],
@@ -66,6 +69,7 @@ export default function InventoryPage() {
         ))}
       </div>
 
+      {activeTab === "control" && <AdvancedStockControlView />}
       {activeTab === "multistore" && <MultiStoreInventoryView />}
       {activeTab === "contracts" && <SupplierContractView />}
       {activeTab === "procure" && <ProcureToPayView />}

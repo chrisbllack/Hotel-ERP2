@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useMarket } from "./i18n/MarketProvider";
 import type { ComponentType } from "react";
 import { AuthProvider } from "./auth/auth";
 import { RequireAuth } from "./auth/RequireAuth";
@@ -27,6 +28,7 @@ import EventsPage from "./pages/EventsPage";
 import HardwarePage from "./pages/HardwarePage";
 import ReportsPage from "./pages/ReportsPage";
 import AdminPage from "./pages/AdminPage";
+import LocalizationPage from "./pages/localization/LocalizationPage";
 
 // Public booking website (M-LOD / M-DST integration)
 import BookPage from "./pages/booking/BookPage";
@@ -54,33 +56,44 @@ const protectedRoutes: Array<[string, ComponentType]> = [
   ["/events", EventsPage],
   ["/hardware", HardwarePage],
   ["/reports", ReportsPage],
+  ["/localization", LocalizationPage],
   ["/admin", AdminPage],
 ];
 
 export default function App() {
+  // Re-render the routed subtree when the operating market changes so pure
+  // formatting helpers (money/date) reflect the new currency/locale. Providers
+  // above the key stay mounted, preserving auth and platform state.
+  const { marketId } = useMarket();
   return (
     <BrowserRouter>
       <AuthProvider>
         <PlatformProvider>
-          <Routes>
-            {/* Public product surfaces */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/book" element={<BookPage />} />
-            <Route path="/book/guests" element={<GuestDetailsPage />} />
-            <Route path="/booking/confirmation" element={<ConfirmationPage />} />
-            <Route path="/booking/lookup" element={<BookingLookupPage />} />
-
-            {/* Staff console (protected) */}
-            <Route element={<RequireAuth><AppShell /></RequireAuth>}>
-              {protectedRoutes.map(([path, Page]) => (
-                <Route key={path} path={path} element={<Page />} />
-              ))}
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <AppRoutes key={marketId} />
         </PlatformProvider>
       </AuthProvider>
     </BrowserRouter>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public product surfaces */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/book" element={<BookPage />} />
+      <Route path="/book/guests" element={<GuestDetailsPage />} />
+      <Route path="/booking/confirmation" element={<ConfirmationPage />} />
+      <Route path="/booking/lookup" element={<BookingLookupPage />} />
+
+      {/* Staff console (protected) */}
+      <Route element={<RequireAuth><AppShell /></RequireAuth>}>
+        {protectedRoutes.map(([path, Page]) => (
+          <Route key={path} path={path} element={<Page />} />
+        ))}
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
