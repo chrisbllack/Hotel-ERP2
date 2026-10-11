@@ -15,7 +15,7 @@ const ROLE_SCOPE: Record<string, string> = {
   hr: "Employees · departments · payroll",
 };
 
-const LICENSING = [
+const LICENSING: Array<[string, string]> = [
   ["Licensed to", "InfinityPlus Solutions & Services Ltd."],
   ["Property", "Grand Palm Hotel Lagos (GPHL)"],
   ["Edition", "Enterprise — all 13 modules"],

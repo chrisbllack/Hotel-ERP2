@@ -214,7 +214,7 @@ export default function YieldManagementPage() {
 
               return (
                 <div
-                  key={rec.id}
+                  key={rec.roomTypeId}
                   className="flex flex-col justify-between rounded-xl border border-brand-800/80 bg-brand-950/60 p-5 transition-colors hover:border-brand-700"
                 >
                   <div>

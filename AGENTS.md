@@ -32,7 +32,11 @@ You are building INFINEON Enterprise Platform (Project TITAN) for InfinityPlus S
 - `internal/domain/{domain}/` — Each domain has model.go, repository.go, service.go, handler.go
 - `internal/server/middleware/` — HTTP middleware
 - `internal/database/` — sqlc queries, models, migrations
-- `frontend/src/features/{feature}/` — Feature-organized React components
+- `src/pages/` — Routed application screens (one file per module surface)
+- `src/components/ui/{primitives,kit}.tsx` — Theme-token design system (layout/data display + interactive controls)
+- `src/components/AppShell.tsx` — Authenticated app chrome (grouped sidebar, command palette, header)
+- `src/store/` — Client state providers (`platform.tsx` hospitality domain, `ancillary.tsx` spa/laundry/transport)
+- `src/theme/` — Theme engine (7 identities) + switcher; `src/i18n/` — market/currency providers
 
 ## Naming Conventions
 
